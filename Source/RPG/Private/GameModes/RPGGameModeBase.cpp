@@ -2,4 +2,10 @@
 
 
 #include "GameModes/RPGGameModeBase.h"
+#include "Character/RPGPlayerState.h"
 
+ARPGGameModeBase::ARPGGameModeBase()
+{
+	// Set default player state class for RPG game mode
+	PlayerStateClass = ARPGPlayerState::StaticClass();
+}
