@@ -4,6 +4,7 @@
 #include "Character/RPGPlayerCharacter.h"
 
 #include "EnhancedInputComponent.h"
+
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "RPGGameplayTags.h"
@@ -14,7 +15,10 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "DrawDebugHelpers.h"
+#include "Animation/AnimationInstances/RPGItemAnimLayersBase.h"
 #include "Items/Weapon/RPGPlayerWeapon.h"
+#include "Character/RPGPlayerState.h"
+#include "AbilitySystem/RPGAbilitySystemComponent.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRPGPlayerCharacter, All, All)
 
@@ -50,6 +54,57 @@ ARPGPlayerCharacter::ARPGPlayerCharacter()
 	GetCharacterMovement()->MaxWalkSpeed = 600.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 200.f;
 
+	// 创建战斗组件
+	PlayerCombatComponent = CreateDefaultSubobject<UPlayerCombatComponent>(TEXT("PlayerCombatComponent"));
+}
+
+UAbilitySystemComponent* ARPGPlayerCharacter::GetAbilitySystemComponent() const
+{
+	if (ARPGPlayerState* PS = GetPlayerState<ARPGPlayerState>())
+	{
+		return PS->GetAbilitySystemComponent();
+	}
+	return nullptr;
+}
+
+void ARPGPlayerCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	InitAbilityActorInfo();
+}
+
+void ARPGPlayerCharacter::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+	InitAbilityActorInfo();
+}
+
+void ARPGPlayerCharacter::InitAbilityActorInfo()
+{
+	ARPGPlayerState* PS = GetPlayerState<ARPGPlayerState>();
+	if (!PS)
+	{
+		return;
+	}
+
+	if (URPGAbilitySystemComponent* ASC = PS->GetRPGAbilitySystemComponent())
+	{
+		// OwnerActor = PlayerState, AvatarActor = this (Character)
+		ASC->InitAbilityActorInfo(PS, this);
+		
+		// 缓存到 Character 的成员变量
+		AbilitySystemComponent = ASC;
+		AttributeSet = PS->GetRPGAttributeSet();
+		
+		UE_LOG(LogRPGPlayerCharacter, Log, 
+			TEXT("ARPGPlayerCharacter::InitAbilityActorInfo - ASC and AttributeSet initialized successfully!"));
+		UE_LOG(LogRPGPlayerCharacter, Log, 
+			TEXT("  - ASC: %s"), 
+			*ASC->GetClass()->GetName());
+		UE_LOG(LogRPGPlayerCharacter, Log, 
+			TEXT("  - AttributeSet: %s"), 
+			AttributeSet ? *AttributeSet->GetClass()->GetName() : TEXT("None"));
+	}
 }
 
 void ARPGPlayerCharacter::BeginPlay()
@@ -69,19 +124,19 @@ void ARPGPlayerCharacter::BeginPlay()
 				*BaseAnimInstance->GetClass()->GetName());
 			
 			// 检查父类
-			UClass* ParentClass = BaseAnimInstance->GetClass()->GetSuperClass();
+			/*UClass* ParentClass = BaseAnimInstance->GetClass()->GetSuperClass();
 			if (ParentClass)
 			{
 				UE_LOG(LogRPGPlayerCharacter, Log, 
 					TEXT("ARPGPlayerCharacter::BeginPlay - Parent Class: %s"), 
 					*ParentClass->GetName());
-			}
+			}*/
 		}
 		
 		CachedAnimInstance = Cast<URPGCharacterAnimInstance>(BaseAnimInstance);
 		
 		// 打印动画实例信息
-		if (CachedAnimInstance)
+		/*if (CachedAnimInstance)
 		{
 			UE_LOG(LogRPGPlayerCharacter, Log, 
 				TEXT("ARPGPlayerCharacter::BeginPlay - Cached AnimInstance: %s"), 
@@ -93,7 +148,7 @@ void ARPGPlayerCharacter::BeginPlay()
 				TEXT("ARPGPlayerCharacter::BeginPlay - Failed to cast to URPGCharacterAnimInstance!"));
 			UE_LOG(LogRPGPlayerCharacter, Warning, 
 				TEXT("Please ensure ABP_Mannequin_Base's Parent Class is set to URPGCharacterAnimInstance"));
-		}
+		}*/
 	}
 	else
 	{
@@ -193,7 +248,7 @@ void ARPGPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	UEnhancedInputLocalPlayerSubsystem* InputSubsystem = ULocalPlayer::GetSubsystem<
 		UEnhancedInputLocalPlayerSubsystem>(LocalPlayer);
 
-	checkf(InputSubsystem, TEXT("InputSusystem is null"))
+	checkf(InputSubsystem, TEXT("InputSubsystem is null"))
 	InputSubsystem->AddMappingContext(InputConfigDataAsset->DefaultMappingContext, 0);
 
 	URPGEnhancedInputComponent* RPGInputComponent = CastChecked<URPGEnhancedInputComponent>(PlayerInputComponent);
@@ -204,8 +259,8 @@ void ARPGPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	                                         ETriggerEvent::Triggered, this,
 	                                         &ThisClass::Input_Look);
 
-	// RPGInputComponent->BindAbilityInputAction(InputConfigDataAsset, this, &ThisClass::Input_AbilityInputPressed,
-	// 											  &ThisClass::Input_AbilityInputReleased);
+	 RPGInputComponent->BindAbilityInputAction(InputConfigDataAsset, this, &ThisClass::Input_AbilityInputPressed,
+	 											  &ThisClass::Input_AbilityInputReleased);
 }
 
 void ARPGPlayerCharacter::Input_Move(const FInputActionValue& InputActionValue)
@@ -325,5 +380,36 @@ void ARPGPlayerCharacter::EquipWeapon(ERPGWeaponType NewWeaponType)
 
 UPlayerCombatComponent* ARPGPlayerCharacter::GetPlayerCombatComponent() const
 {
-	return FindComponentByClass<UPlayerCombatComponent>();
+	return PlayerCombatComponent;
+}
+
+void ARPGPlayerCharacter::Input_AbilityInputPressed(FGameplayTag InputTag)
+{
+	UE_LOG(LogTemp, Log, TEXT("Input_AbilityInputPressed: InputTag [%s]"), *InputTag.ToString());
+	if (ARPGPlayerState* PS = GetPlayerState<ARPGPlayerState>())
+	{
+		if (URPGAbilitySystemComponent* ASC = PS->GetRPGAbilitySystemComponent())
+		{
+			ASC->OnAbilityInputPressed(InputTag);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Input_AbilityInputPressed: ASC is null!"));
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Input_AbilityInputPressed: PlayerState is null!"));
+	}
+}
+
+void ARPGPlayerCharacter::Input_AbilityInputReleased(FGameplayTag InputTag)
+{
+	if (ARPGPlayerState* PS = GetPlayerState<ARPGPlayerState>())
+	{
+		if (URPGAbilitySystemComponent* ASC = PS->GetRPGAbilitySystemComponent())
+		{
+			ASC->OnAbilityInputReleased(InputTag);
+		}
+	}
 }

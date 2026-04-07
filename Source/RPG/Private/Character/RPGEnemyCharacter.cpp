@@ -1,12 +1,12 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Character/AEnemyCharacter.h"
+#include "Character/RPGEnemyCharacter.h"
 #include "AbilitySystem/RPGAbilitySystemComponent.h"
 #include "AbilitySystem/RPGAttributeSet.h"
 #include "DataAsset/StartUpDate/DataAsset_EnemyStartUpData.h"
 
-AEnemyCharacter::AEnemyCharacter()
+ARPGEnemyCharacter::ARPGEnemyCharacter()
 {
 	// Create ability system component on the character itself (for enemies)
 	RPGAbilitySystemComponent = CreateDefaultSubobject<URPGAbilitySystemComponent>(TEXT("RPGAbilitySystemComponent"));
@@ -16,12 +16,12 @@ AEnemyCharacter::AEnemyCharacter()
 	RPGAttributeSet = CreateDefaultSubobject<URPGAttributeSet>(TEXT("RPGAttributeSet"));
 }
 
-UAbilitySystemComponent* AEnemyCharacter::GetAbilitySystemComponent() const
+UAbilitySystemComponent* ARPGEnemyCharacter::GetAbilitySystemComponent() const
 {
 	return RPGAbilitySystemComponent;
 }
 
-void AEnemyCharacter::BeginPlay()
+void ARPGEnemyCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
@@ -35,7 +35,7 @@ void AEnemyCharacter::BeginPlay()
 	InitializeStartupData();
 }
 
-void AEnemyCharacter::InitializeStartupData()
+void ARPGEnemyCharacter::InitializeStartupData()
 {
 	if (!EnemyStartUpData || !RPGAbilitySystemComponent)
 	{

@@ -7,6 +7,7 @@
 #include "AbilitySystemInterface.h"
 #include "RPGPlayerState.generated.h"
 
+class UAttributeSet;
 class URPGAbilitySystemComponent;
 class URPGAttributeSet;
 class UDataAsset_PlayerStartUpData;
@@ -31,7 +32,7 @@ public:
 	URPGAbilitySystemComponent* GetRPGAbilitySystemComponent() const { return RPGAbilitySystemComponent; }
 
 	UFUNCTION(BlueprintPure, Category = "RPG|AbilitySystem")
-	URPGAttributeSet* GetRPGAttributeSet() const { return RPGAttributeSet; }
+	UAttributeSet* GetRPGAttributeSet() const { return AttributeSet; }
 
 protected:
 	virtual void BeginPlay() override;
@@ -43,7 +44,7 @@ private:
 
 	// Attribute Set for player stats
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "RPG|AbilitySystem", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<URPGAttributeSet> RPGAttributeSet;
+	TObjectPtr<UAttributeSet> AttributeSet;
 
 	// Startup data to grant abilities and effects on spawn
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "RPG|Startup", meta = (AllowPrivateAccess = "true"))

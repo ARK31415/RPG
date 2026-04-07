@@ -7,28 +7,14 @@
 #include "AbilitySystem/RPGAbilitySystemComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "RPGGameplayTags.h"
-#include "GameFramework/Pawn.h"
-#include "GameFramework/PlayerState.h"
 #include "Interface/PawnCombatInterface.h"
 
 URPGAbilitySystemComponent* URPGFunctionLibrary::NativeGetRPGASCFromActor(AActor* InActor)
 {
 	check(InActor);
 
-	// Try to get ASC from the actor directly first (for enemies)
+	// Character and Enemy both implement IAbilitySystemInterface now
 	UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(InActor);
-	
-	// If not found on actor, try to get from PlayerState (for players)
-	if (!ASC)
-	{
-		if (APawn* Pawn = Cast<APawn>(InActor))
-		{
-			if (APlayerState* PlayerState = Pawn->GetPlayerState())
-			{
-				ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(PlayerState);
-			}
-		}
-	}
 
 	return CastChecked<URPGAbilitySystemComponent>(ASC);
 }

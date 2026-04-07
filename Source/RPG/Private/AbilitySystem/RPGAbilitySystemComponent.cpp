@@ -4,14 +4,45 @@
 #include "AbilitySystem/RPGAbilitySystemComponent.h"
 #include "AbilitySystem/Abilities/RPGPlayerGameplayAbility.h"
 
+DEFINE_LOG_CATEGORY_STATIC(LogRPGAbilitySystemComponent, All, All)
+
 void URPGAbilitySystemComponent::OnAbilityInputPressed(const FGameplayTag& InputTag)
 {
-	if(!InputTag.IsValid()) return;
+	if(!InputTag.IsValid())
+	{
+		UE_LOG(LogRPGAbilitySystemComponent, Warning, TEXT("OnAbilityInputPressed: InputTag is invalid!"));
+		return;
+	}
 
+	UE_LOG(LogRPGAbilitySystemComponent, Log, TEXT("OnAbilityInputPressed: Received InputTag [%s]"), *InputTag.ToString());
+
+	bool bFoundMatchingAbility = false;
 	for(const FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
 	{
+		UE_LOG(LogRPGAbilitySystemComponent, Log, TEXT("  Checking Ability [%s], DynamicTags: [%s]"),
+			AbilitySpec.Ability ? *AbilitySpec.Ability->GetClass()->GetName() : TEXT("null"),
+			*AbilitySpec.GetDynamicSpecSourceTags().ToStringSimple());
+
 		if(!AbilitySpec.GetDynamicSpecSourceTags().HasTagExact(InputTag)) continue;
-		TryActivateAbility(AbilitySpec.Handle);
+
+		bFoundMatchingAbility = true;
+		UE_LOG(LogRPGAbilitySystemComponent, Log, TEXT("  -> Found matching Ability [%s], attempting to activate..."),
+			AbilitySpec.Ability ? *AbilitySpec.Ability->GetClass()->GetName() : TEXT("null"));
+				
+		// 诊断信息
+		if (AbilitySpec.Ability)
+		{
+			UE_LOG(LogRPGAbilitySystemComponent, Log, TEXT("     - Level: %d"), AbilitySpec.Level);
+			UE_LOG(LogRPGAbilitySystemComponent, Log, TEXT("     - InputID: %d"), AbilitySpec.InputID);
+		}
+				
+		const bool bSuccess = TryActivateAbility(AbilitySpec.Handle);
+		UE_LOG(LogRPGAbilitySystemComponent, Log, TEXT("  -> TryActivateAbility result: %s"), bSuccess ? TEXT("SUCCESS") : TEXT("FAILED"));
+	}
+
+	if(!bFoundMatchingAbility)
+	{
+		UE_LOG(LogRPGAbilitySystemComponent, Warning, TEXT("OnAbilityInputPressed: No ability found with InputTag [%s]"), *InputTag.ToString());
 	}
 }
 

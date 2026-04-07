@@ -6,6 +6,8 @@
 #include "AbilitySystem/RPGAttributeSet.h"
 #include "DataAsset/StartUpDate/DataAsset_PlayerStartUpData.h"
 
+DEFINE_LOG_CATEGORY_STATIC(LogRPGPlayerState, All, All)
+
 ARPGPlayerState::ARPGPlayerState()
 {
 	// Create ability system component, and set it to be explicitly replicated
@@ -13,7 +15,7 @@ ARPGPlayerState::ARPGPlayerState()
 	RPGAbilitySystemComponent->SetIsReplicated(true);
 
 	// Create attribute set
-	RPGAttributeSet = CreateDefaultSubobject<URPGAttributeSet>(TEXT("RPGAttributeSet"));
+	AttributeSet = CreateDefaultSubobject<URPGAttributeSet>(TEXT("RPGAttributeSet"));
 }
 
 UAbilitySystemComponent* ARPGPlayerState::GetAbilitySystemComponent() const
@@ -25,11 +27,9 @@ void ARPGPlayerState::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Initialize ASC with avatar actor (the player character)
-	if (RPGAbilitySystemComponent && GetPawn())
-	{
-		RPGAbilitySystemComponent->InitAbilityActorInfo(this, GetPawn());
-	}
+	// Note: InitAbilityActorInfo is now called from Character side
+	// (PossessedBy for server, OnRep_PlayerState for client)
+	// to ensure Character mesh is available as AvatarActor
 
 	// Initialize startup data (grant abilities and effects)
 	InitializeStartupData();

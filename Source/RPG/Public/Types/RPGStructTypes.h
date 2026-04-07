@@ -2,9 +2,11 @@
 
 #include "GameplayTagContainer.h"
 #include "ScalableFloat.h"
+#include "Animation/AnimMontage.h"
 
 #include "RPGStructTypes.generated.h"
 
+class URPGItemAnimLayersBase;
 class URPGPlayerGameplayAbility;
 class URPGGameplayAbility;
 class UInputMappingContext;
@@ -30,7 +32,13 @@ struct FRPGPlayerWeaponData
 	GENERATED_BODY()
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	TSubclassOf<UAnimInstance> WeaponAnimLayerToLink;
+	TSubclassOf<URPGItemAnimLayersBase> WeaponAnimLayerToLink;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	UAnimMontage* EquipWeaponMontage;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	UAnimMontage* UnequipWeaponMontage;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	UInputMappingContext* WeaponInputMappingContext;

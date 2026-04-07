@@ -7,6 +7,7 @@
 #include "Types/RPGEnumTypes.h"
 #include "RPGPlayerCharacter.generated.h"
 
+struct FGameplayTag;
 struct FInputActionValue;
 class UDataAsset_InputConfig;
 class UDataAsset_CharacterConfig;
@@ -14,6 +15,8 @@ class USpringArmComponent;
 class UCameraComponent;
 class URPGCharacterAnimInstance;
 class UPlayerCombatComponent;
+class URPGAbilitySystemComponent;
+class URPGAttributeSet;
 /**
  * 
  */
@@ -25,10 +28,22 @@ class RPG_API ARPGPlayerCharacter : public ABaseCharacter
 public:
 	ARPGPlayerCharacter();
 
+	// IAbilitySystemInterface - 从 PlayerState 获取 ASC
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+
+	// 服务端：Controller Possess 时初始化 ASC ActorInfo
+	virtual void PossessedBy(AController* NewController) override;
+
+	// 客户端：PlayerState 复制到位后初始化 ASC ActorInfo
+	virtual void OnRep_PlayerState() override;
+
+	// 初始化 ASC ActorInfo（服务端/客户端共用）
+	void InitAbilityActorInfo();
 
 public:
 	// ========== 装备系统 ==========
@@ -94,7 +109,9 @@ private:
 	/** 是否显示转向调试射线（绿色=当前朝向，红色=目标朝向） */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug", meta=(AllowPrivateAccess = "true"))
 	bool bShowRotationDebug;
-
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat", meta=(AllowPrivateAccess = "true"))
+	UPlayerCombatComponent* PlayerCombatComponent;
 
 	// 当前武器类型
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Equipment", meta=(AllowPrivateAccess = "true"))
@@ -118,4 +135,6 @@ private:
 
 	void Input_Move(const FInputActionValue& InputActionValue);
 	void Input_Look(const FInputActionValue& InputActionValue);
+	void Input_AbilityInputPressed(FGameplayTag InputTag);
+	void Input_AbilityInputReleased(FGameplayTag InputTag);
 };

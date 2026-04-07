@@ -4,8 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Character/BaseCharacter.h"
-#include "AbilitySystemInterface.h"
-#include "AEnemyCharacter.generated.h"
+#include "RPGEnemyCharacter.generated.h"
 
 class URPGAbilitySystemComponent;
 class URPGAttributeSet;
@@ -16,12 +15,12 @@ class UDataAsset_EnemyStartUpData;
  * 简化AI敌人的实现，敌人不需要持久化数据
  */
 UCLASS()
-class RPG_API AEnemyCharacter : public ABaseCharacter, public IAbilitySystemInterface
+class RPG_API ARPGEnemyCharacter : public ABaseCharacter
 {
 	GENERATED_BODY()
 
 public:
-	AEnemyCharacter();
+	ARPGEnemyCharacter();
 
 	// IAbilitySystemInterface implementation
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
