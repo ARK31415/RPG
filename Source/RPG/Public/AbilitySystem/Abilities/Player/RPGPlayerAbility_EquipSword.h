@@ -19,7 +19,7 @@ class RPG_API URPGPlayerAbility_EquipSword : public URPGPlayerGameplayAbility
 
 protected:
 	// 附加到角色骨骼上的Socket名称
-	UPROPERTY(EditDefaultsOnly, Category = "RPGShareAbility_SpawnWeapon")
+	UPROPERTY(EditDefaultsOnly, Category = "RPGPlayerAbility_EquipWeapon")
 	FName SocketNameToAttach;
 	
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;

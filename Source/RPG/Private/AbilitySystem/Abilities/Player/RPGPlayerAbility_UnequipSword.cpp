@@ -13,6 +13,8 @@
 #include "Items/Weapon/RPGPlayerWeapon.h"
 #include "RPGGameplayTags.h"
 
+DEFINE_LOG_CATEGORY_STATIC(LogRPGPlayerAbility_UnequipSword, All, All)
+
 void URPGPlayerAbility_UnequipSword::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
@@ -24,6 +26,8 @@ void URPGPlayerAbility_UnequipSword::ActivateAbility(const FGameplayAbilitySpecH
 	CachedEquippedWeapon = GetCurrentEquippedWeapon();
 	if (!CachedEquippedWeapon)
 	{
+		UE_LOG(LogRPGPlayerAbility_UnequipSword, Error,
+		       TEXT("URPGPlayerAbility_UnequipSword::ActivateAbility - No equipped weapon found!"));
 		EndAbility(Handle, ActorInfo, ActivationInfo, false, true);
 		return;
 	}
@@ -37,6 +41,9 @@ void URPGPlayerAbility_UnequipSword::ActivateAbility(const FGameplayAbilitySpecH
 		return;
 	}
 
+	// 先启动WaitGameplayEvent（捕获蒙太奇播放期间AnimNotify发出的事件）
+	WaitForUnequipGameplayEvent();
+
 	UAbilityTask_PlayMontageAndWait* MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
 		this,
 		NAME_None,
@@ -47,11 +54,13 @@ void URPGPlayerAbility_UnequipSword::ActivateAbility(const FGameplayAbilitySpecH
 		1.0f
 	);
 
-	MontageTask->OnCompleted.AddDynamic(this, &URPGPlayerAbility_UnequipSword::OnUnequipMontageCompleted);
-	MontageTask->OnBlendOut.AddDynamic(this, &URPGPlayerAbility_UnequipSword::OnUnequipMontageBlendOut);
-	MontageTask->OnInterrupted.AddDynamic(this, &URPGPlayerAbility_UnequipSword::OnUnequipMontageInterrupted);
-	MontageTask->OnCancelled.AddDynamic(this, &URPGPlayerAbility_UnequipSword::OnUnequipMontageCancelled);
-	MontageTask->ReadyForActivation();
+	if (!MontageTask)
+	{
+		UE_LOG(LogRPGPlayerAbility_UnequipSword, Error,
+		       TEXT("URPGPlayerAbility_UnequipSword::ActivateAbility - MontageTask creation failed!"));
+		EndAbility(Handle, ActorInfo, ActivationInfo, false, true);
+		return;
+	}
 }
 
 void URPGPlayerAbility_UnequipSword::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
@@ -112,24 +121,28 @@ void URPGPlayerAbility_UnequipSword::RemoveWeaponAbilities(ARPGPlayerWeapon* Wea
 
 void URPGPlayerAbility_UnequipSword::OnUnequipMontageCompleted()
 {
-	// 动画播放完成，等待GameplayEvent
-	WaitForUnequipGameplayEvent();
+	// 动画播放完成
+	// 注意：如果AnimNotify已经触发过事件，这里不需要再做额外操作
 }
 
 void URPGPlayerAbility_UnequipSword::OnUnequipMontageBlendOut()
 {
-	// 动画混合退出，等待GameplayEvent
-	WaitForUnequipGameplayEvent();
+	// 动画混合退出
+	// 注意：如果AnimNotify已经触发过事件，这里不需要再做额外操作
 }
 
 void URPGPlayerAbility_UnequipSword::OnUnequipMontageInterrupted()
 {
+	UE_LOG(LogRPGPlayerAbility_UnequipSword, Error,
+	       TEXT("URPGPlayerAbility_UnequipSword::OnUnequipMontageInterrupted - Montage interrupted, ending ability"));
 	// 动画被中断，结束能力
 	EndAbility(GetCurrentAbilitySpecHandle(), GetCurrentActorInfo(), GetCurrentActivationInfo(), false, true);
 }
 
 void URPGPlayerAbility_UnequipSword::OnUnequipMontageCancelled()
 {
+	UE_LOG(LogRPGPlayerAbility_UnequipSword, Error,
+	       TEXT("URPGPlayerAbility_UnequipSword::OnUnequipMontageCancelled - Montage cancelled, ending ability"));
 	// 动画被取消，结束能力
 	EndAbility(GetCurrentAbilitySpecHandle(), GetCurrentActorInfo(), GetCurrentActivationInfo(), false, true);
 }
@@ -158,19 +171,42 @@ void URPGPlayerAbility_UnequipSword::DetachWeaponFromCharacter()
 {
 	if (!CachedEquippedWeapon || !CachedPlayerCharacter)
 	{
+		UE_LOG(LogRPGPlayerAbility_UnequipSword, Error,
+		       TEXT("URPGPlayerAbility_UnequipSword::DetachWeaponFromCharacter - CachedEquippedWeapon or CachedPlayerCharacter is null!"));
 		EndAbility(GetCurrentAbilitySpecHandle(), GetCurrentActorInfo(), GetCurrentActivationInfo(), false, true);
 		return;
 	}
 
 	CombatComponent->CurrentEquippedWeaponTag = FGameplayTag::EmptyTag;
 
-	// 先执行卸下逻辑（与Equip相反的顺序）
-	RemoveWeaponAbilities(CachedEquippedWeapon);
-	RemoveWeaponInputMappingContext(CachedEquippedWeapon);
-	UnlinkWeaponAnimLayer();
+	// 通过GetPlayerCarriedWeaponByTag从CombatComponent获取已注册的武器
+	ARPGPlayerWeapon* SwordWeapon = CombatComponent->GetPlayerCarriedWeaponByTag(RPGGameplayTags::Player_Weapon_Sword);
+	if (!SwordWeapon)
+	{
+		UE_LOG(LogRPGPlayerAbility_UnequipSword, Error,
+		       TEXT("URPGPlayerAbility_UnequipSword::DetachWeaponFromCharacter - SwordWeapon not found in CombatComponent!"));
+		EndAbility(GetCurrentAbilitySpecHandle(), GetCurrentActorInfo(), GetCurrentActivationInfo(), false, true);
+		return;
+	}
 
-	// 将武器从角色上分离
-	CachedEquippedWeapon->DetachFromActor(FDetachmentTransformRules::KeepWorldTransform);
+	// 先执行卸下逻辑（与Equip相反的顺序）
+	UnlinkWeaponAnimLayer();
+	RemoveWeaponInputMappingContext(CachedEquippedWeapon);
+	RemoveWeaponAbilities(CachedEquippedWeapon);
+
+	// 将武器附加到角色骨骼的指定Socket（背后）
+	if (USkeletalMeshComponent* MeshComp = CachedPlayerCharacter->GetMesh())
+	{
+		SwordWeapon->AttachToComponent(MeshComp, FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+									   SocketNameToAttach);
+	}
+	else
+	{
+		UE_LOG(LogRPGPlayerAbility_UnequipSword, Error,
+		       TEXT("URPGPlayerAbility_UnequipSword::DetachWeaponFromCharacter - Character MeshComponent is null!"));
+		EndAbility(GetCurrentAbilitySpecHandle(), GetCurrentActorInfo(), GetCurrentActivationInfo(), false, true);
+		return;
+	}
 
 	// 正常结束能力
 	EndAbility(GetCurrentAbilitySpecHandle(), GetCurrentActorInfo(), GetCurrentActivationInfo(), false, false);

@@ -354,8 +354,6 @@ void ARPGPlayerCharacter::EquipWeapon(ERPGWeaponType NewWeaponType)
 			if (ARPGPlayerWeapon* Weapon = CombatComp->GetPlayerCurrentEquippedWeapon())
 			{
 				NewAnimLayerClass = Weapon->PlayerWeaponData.WeaponAnimLayerToLink;
-				// 应用武器战斗参数（连招、攻速等）
-				CombatComp->ApplyWeaponData(Weapon->PlayerWeaponData);
 			}
 		}
 

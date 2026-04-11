@@ -51,14 +51,4 @@ struct FRPGPlayerWeaponData
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSoftObjectPtr<UTexture2D> SoftWeaponIconTexture;
-
-	// 战斗行为配置（黑魂模式：武器决定战斗风格）
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat Behavior")
-	int32 MaxComboCount = 4;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat Behavior")
-	float AttackSpeedMultiplier = 1.0f;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat Behavior")
-	float BaseDamageMultiplier = 1.0f;
 };

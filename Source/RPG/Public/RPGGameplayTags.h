@@ -51,6 +51,14 @@ namespace RPGGameplayTags
 	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Shared_Event_MeleeHit);
 	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Shared_Event_HitReact);
 
+	//Shared Combo Window Event Tags
+	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Shared_Event_ComboWindow_Open);
+	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Shared_Event_ComboWindow_Close);
+
+	//Shared Melee Collision Event Tags
+	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Shared_Event_Melee_CollisionEnable);
+	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Shared_Event_Melee_CollisionDisable);
+
 	//Shared SetByCaller Tags
 	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Shared_SetByCaller_BaseDamage);
 

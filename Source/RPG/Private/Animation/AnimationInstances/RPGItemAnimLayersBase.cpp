@@ -41,15 +41,7 @@ void URPGItemAnimLayersBase::SetWeaponType(ERPGWeaponType NewType)
 
 void URPGItemAnimLayersBase::SyncFromCombatComponent()
 {
-	if (!CombatComponent)
-	{
-		return;
-	}
-
-	CombatState = CombatComponent->GetCombatState();
-	ComboIndex = CombatComponent->GetComboIndex();
-	MaxComboCount = CombatComponent->GetMaxComboCount();
-	bIsInComboWindow = CombatComponent->IsAttacking() && (ComboIndex < MaxComboCount - 1);
-	AttackSpeedMultiplier = CombatComponent->GetAttackSpeedMultiplier();
-	bIsAttacking = CombatComponent->IsAttacking();
+	// 连招状态已迁移至GAS Ability层
+	// 动画层只需通过Montage播放接收表现指令
+	// 未来如需同步状态，可通过GameplayTag或事件机制
 }

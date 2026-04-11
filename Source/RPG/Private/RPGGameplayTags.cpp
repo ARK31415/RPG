@@ -50,6 +50,14 @@ namespace RPGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Shared_Event_MeleeHit, "Shared.Event.MeleeHit");
 	UE_DEFINE_GAMEPLAY_TAG(Shared_Event_HitReact, "Shared.Event.HitReact");
 
+	//Shared Combo Window Event Tags
+	UE_DEFINE_GAMEPLAY_TAG(Shared_Event_ComboWindow_Open, "Shared.Event.ComboWindow.Open");
+	UE_DEFINE_GAMEPLAY_TAG(Shared_Event_ComboWindow_Close, "Shared.Event.ComboWindow.Close");
+
+	//Shared Melee Collision Event Tags
+	UE_DEFINE_GAMEPLAY_TAG(Shared_Event_Melee_CollisionEnable, "Shared.Event.Melee.CollisionEnable");
+	UE_DEFINE_GAMEPLAY_TAG(Shared_Event_Melee_CollisionDisable, "Shared.Event.Melee.CollisionDisable");
+
 	//Shared SetByCaller Tags
 	UE_DEFINE_GAMEPLAY_TAG(Shared_SetByCaller_BaseDamage, "Shared.SetByCaller.BaseDamage");
 
