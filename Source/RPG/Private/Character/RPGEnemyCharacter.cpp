@@ -4,6 +4,7 @@
 #include "Character/RPGEnemyCharacter.h"
 #include "AbilitySystem/RPGAbilitySystemComponent.h"
 #include "AbilitySystem/RPGAttributeSet.h"
+#include "Component/Combat/EnemyCombatComponent.h"
 #include "DataAsset/StartUpDate/DataAsset_EnemyStartUpData.h"
 
 ARPGEnemyCharacter::ARPGEnemyCharacter()
@@ -19,6 +20,11 @@ ARPGEnemyCharacter::ARPGEnemyCharacter()
 UAbilitySystemComponent* ARPGEnemyCharacter::GetAbilitySystemComponent() const
 {
 	return RPGAbilitySystemComponent;
+}
+
+UEnemyCombatComponent* ARPGEnemyCharacter::GetEnemyCombatComponent() const
+{
+	return EnemyCombatComponent;
 }
 
 void ARPGEnemyCharacter::BeginPlay()

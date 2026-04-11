@@ -3,8 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AbilitySystem/Abilities/Player/RPGAbility_LightAttackCombo.h"
-#include "RPGAbility_LightAttack_Sword.generated.h"
+#include "AbilitySystem/Abilities/Player/RPGPlayerAbility_LightAttack.h"
+#include "RPGPlayerAbility_LightAttack_Sword.generated.h"
 
 /**
  * 剑轻击连招（Player层 - 武器具体实现）
@@ -12,10 +12,10 @@
  * 在蓝图子类或CDO中设置ComboMontages和MaxComboCount
  */
 UCLASS()
-class RPG_API URPGAbility_LightAttack_Sword : public URPGAbility_LightAttackCombo
+class RPG_API URPGPlayerAbility_LightAttack_Sword : public URPGPlayerAbility_AttackCombo
 {
 	GENERATED_BODY()
 
 public:
-	URPGAbility_LightAttack_Sword();
+	URPGPlayerAbility_LightAttack_Sword();
 };

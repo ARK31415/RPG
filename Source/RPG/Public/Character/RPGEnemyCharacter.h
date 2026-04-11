@@ -29,6 +29,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "RPG|AbilitySystem")
 	URPGAbilitySystemComponent* GetRPGAbilitySystemComponent() const { return RPGAbilitySystemComponent; }
 
+	/** 获取玩家战斗组件 */
+	UFUNCTION(BlueprintPure, Category = "Combat")
+	UEnemyCombatComponent* GetEnemyCombatComponent() const;
+	
 	UFUNCTION(BlueprintPure, Category = "RPG|AbilitySystem")
 	URPGAttributeSet* GetRPGAttributeSet() const { return RPGAttributeSet; }
 
@@ -47,6 +51,9 @@ private:
 	// Startup data to grant abilities and effects on spawn
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "RPG|Startup", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UDataAsset_EnemyStartUpData> EnemyStartUpData;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat", meta=(AllowPrivateAccess = "true"))
+	UEnemyCombatComponent* EnemyCombatComponent;
 
 	// Initialize startup data (grant abilities and effects)
 	void InitializeStartupData();

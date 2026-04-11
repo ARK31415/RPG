@@ -3,8 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AbilitySystem/Abilities/Player/RPGAbility_HeavyAttackCombo.h"
-#include "RPGAbility_HeavyAttack_Sword.generated.h"
+#include "AbilitySystem/Abilities/Player/RPGPlayerAbility_HeavyAttack.h"
+#include "RPGPlayerAbility_HeavyAttack_Sword.generated.h"
 
 /**
  * 剑重击连招（Player层 - 武器具体实现）
@@ -12,10 +12,10 @@
  * 在蓝图子类或CDO中设置ComboMontages和MaxComboCount
  */
 UCLASS()
-class RPG_API URPGAbility_HeavyAttack_Sword : public URPGAbility_HeavyAttackCombo
+class RPG_API URPGPlayerAbility_HeavyAttack_Sword : public URPGPlayerAbility_HeavyAttack
 {
 	GENERATED_BODY()
 
 public:
-	URPGAbility_HeavyAttack_Sword();
+	URPGPlayerAbility_HeavyAttack_Sword();
 };

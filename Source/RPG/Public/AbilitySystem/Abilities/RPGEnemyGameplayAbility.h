@@ -10,7 +10,7 @@ class ARPGEnemyCharacter;
 class UEnemyCombatComponent;
 
 /**
- * 敌人Ability基类（Enemy层）
+ * 敌人Ability基类
  * 提供敌人特有的辅助方法：AI控制器访问、EnemyCombatComponent获取等
  * 所有敌人Ability均继承此类
  */

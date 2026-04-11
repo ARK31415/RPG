@@ -3,10 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AbilitySystem/Abilities/Share/RPGAbility_MeleeAttackCombo.h"
-#include "RPGAbility_LightAttackCombo.generated.h"
-
-class UPlayerCombatComponent;
+#include "AbilitySystem/Abilities/Player/RPGPlayerAbility_AttackCombo.h"
+#include "RPGPlayerAbility_LightAttack.generated.h"
 
 /**
  * 轻击连招基类（Player层）
@@ -14,16 +12,10 @@ class UPlayerCombatComponent;
  * 轻击特有规则：较快的窗口期，未来可支持转换到重击
  */
 UCLASS(Abstract)
-class RPG_API URPGAbility_LightAttackCombo : public URPGAbility_MeleeAttackCombo
+class RPG_API URPGPlayerAbility_LightAttack : public URPGPlayerAbility_AttackCombo
 {
 	GENERATED_BODY()
 
 protected:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
-
-	// 重写GetCombatComponent返回PlayerCombatComponent
-	virtual UPawnCombatComponent* GetCombatComponent() const override;
-
-	/** 获取PlayerCombatComponent的便捷方法 */
-	UPlayerCombatComponent* GetPlayerCombatComponent() const;
 };
