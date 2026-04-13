@@ -86,7 +86,7 @@ protected:
 
 	// Maximum combo count (e.g., 3 for 3-hit combo)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combo")
-	int32 MaxComboCount = 3;
+	int32 MaxComboCount = 4;
 
 	// Combo window duration in seconds (time allowed to input next attack)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combo")
