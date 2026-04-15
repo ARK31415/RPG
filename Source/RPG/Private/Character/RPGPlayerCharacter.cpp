@@ -160,6 +160,19 @@ void ARPGPlayerCharacter::BeginPlay()
 
 	// 初始化目标旋转为当前朝向
 	TargetRotation = GetActorRotation();
+
+	// 启动2秒定时器
+	if (GetWorld())
+	{
+		GetWorld()->GetTimerManager().SetTimer(
+			DebugTimerHandle,
+			this,
+			&ARPGPlayerCharacter::OnDebugTimerTick,
+			2.0f,
+			true  // 循环
+		);
+		UE_LOG(LogRPGPlayerCharacter, Log, TEXT("ARPGPlayerCharacter::BeginPlay - Debug timer started (2.0s interval)"));
+	}
 }
 
 void ARPGPlayerCharacter::Tick(float DeltaTime)
@@ -410,4 +423,24 @@ void ARPGPlayerCharacter::Input_AbilityInputReleased(FGameplayTag InputTag)
 			ASC->OnAbilityInputReleased(InputTag);
 		}
 	}
+}
+
+void ARPGPlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	// 清除定时器
+	if (GetWorld())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(DebugTimerHandle);
+	}
+	
+	Super::EndPlay(EndPlayReason);
+}
+
+void ARPGPlayerCharacter::OnDebugTimerTick()
+{
+	UE_LOG(LogRPGPlayerCharacter, Error, 
+		TEXT("[ARPGPlayerCharacter] Debug Timer Tick - Actor: %s, Location: %s, ComboCount: %d"),
+		*GetName(),
+		*GetActorLocation().ToString(),
+		PlayerCombatComponent ? PlayerCombatComponent->GetCurrentComboCount() : -1);
 }

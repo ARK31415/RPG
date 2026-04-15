@@ -34,6 +34,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
 	// 服务端：Controller Possess 时初始化 ASC ActorInfo
@@ -109,6 +110,13 @@ private:
 	/** 是否显示转向调试射线（绿色=当前朝向，红色=目标朝向） */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug", meta=(AllowPrivateAccess = "true"))
 	bool bShowRotationDebug;
+
+	// 定时器句柄
+	FTimerHandle DebugTimerHandle;
+
+	// 定时器回调
+	UFUNCTION()
+	void OnDebugTimerTick();
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat", meta=(AllowPrivateAccess = "true"))
 	UPlayerCombatComponent* PlayerCombatComponent;

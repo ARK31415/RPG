@@ -19,6 +19,9 @@ void URPGPlayerAbility_UnequipSword::ActivateAbility(const FGameplayAbilitySpecH
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
+	UE_LOG(LogRPGPlayerAbility_UnequipSword, Error,
+	   TEXT("URPGPlayerAbility_UnequipSword::ActivateAbility!"));
+
 	CachedPlayerCharacter = GetPlayerCharacterFromActorInfo();
 	CachedPlayerController = GetPlayerControllerFromActorInfo();
 	CombatComponent = CachedPlayerCharacter->GetPlayerCombatComponent();
@@ -61,6 +64,12 @@ void URPGPlayerAbility_UnequipSword::ActivateAbility(const FGameplayAbilitySpecH
 		EndAbility(Handle, ActorInfo, ActivationInfo, false, true);
 		return;
 	}
+
+	MontageTask->OnCompleted.AddDynamic(this, &URPGPlayerAbility_UnequipSword::OnUnequipMontageCompleted);
+	MontageTask->OnBlendOut.AddDynamic(this, &URPGPlayerAbility_UnequipSword::OnUnequipMontageBlendOut);
+	MontageTask->OnInterrupted.AddDynamic(this, &URPGPlayerAbility_UnequipSword::OnUnequipMontageInterrupted);
+	MontageTask->OnCancelled.AddDynamic(this, &URPGPlayerAbility_UnequipSword::OnUnequipMontageCancelled);
+	MontageTask->ReadyForActivation();
 }
 
 void URPGPlayerAbility_UnequipSword::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
@@ -149,6 +158,8 @@ void URPGPlayerAbility_UnequipSword::OnUnequipMontageCancelled()
 
 void URPGPlayerAbility_UnequipSword::WaitForUnequipGameplayEvent()
 {
+	UE_LOG(LogRPGPlayerAbility_UnequipSword, Error,
+TEXT("URPGPlayerAbility_UnequipSword::WaitForUnequipGameplayEvent!"));
 	UAbilityTask_WaitGameplayEvent* WaitEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
 		this,
 		RPGGameplayTags::Player_Event_Unequip_Sword,

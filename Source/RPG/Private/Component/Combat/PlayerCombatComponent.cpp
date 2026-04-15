@@ -5,6 +5,55 @@
 #include "Items/Weapon/RPGPlayerWeapon.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "RPGGameplayTags.h"
+#include "Kismet/KismetSystemLibrary.h"
+
+DEFINE_LOG_CATEGORY_STATIC(LogRPGPlayerCombatComponent, All, All)
+
+UPlayerCombatComponent::UPlayerCombatComponent()
+{
+	CurrentComboCount = 1;
+}
+
+void UPlayerCombatComponent::BeginPlay()
+{
+	Super::BeginPlay();
+	CurrentComboCount = 1;
+}
+
+void UPlayerCombatComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (GetWorld())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(ComboResetTimerHandle);
+	}
+	Super::EndPlay(EndPlayReason);
+}
+
+void UPlayerCombatComponent::ResetComboCount()
+{
+	CurrentComboCount = 1;
+	UE_LOG(LogRPGPlayerCombatComponent, Log, TEXT("[PlayerCombatComponent] Combo count reset to 1 (timer expired)"));
+}
+
+void UPlayerCombatComponent::AdvanceComboCount(int32 MaxComboCount)
+{
+	if (CurrentComboCount >= MaxComboCount)
+	{
+		CurrentComboCount = 1;
+		UE_LOG(LogRPGPlayerCombatComponent, Log, TEXT("[PlayerCombatComponent] Max combo reached, resetting to 1"));
+	}
+	else
+	{
+		CurrentComboCount++;
+		UE_LOG(LogRPGPlayerCombatComponent, Log, TEXT("[PlayerCombatComponent] Combo count advanced to %d"), CurrentComboCount);
+	}
+}
+
+void UPlayerCombatComponent::OnComboWindowTimerExpired()
+{
+	UE_LOG(LogRPGPlayerCombatComponent, Warning, TEXT("[PlayerCombatComponent] >>> Combo window timer expired, resetting combo <<<"));
+	ResetComboCount();
+}
 
 ARPGPlayerWeapon* UPlayerCombatComponent::GetPlayerCarriedWeaponByTag(FGameplayTag InWeaponTag) const
 {
