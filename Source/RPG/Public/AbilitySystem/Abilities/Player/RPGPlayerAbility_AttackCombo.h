@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystem/Abilities/RPGPlayerGameplayAbility.h"
+#include "Types/RPGEnumTypes.h"
 #include "RPGPlayerAbility_AttackCombo.generated.h"
 
 class UPlayerCombatComponent;
@@ -76,11 +77,13 @@ protected:
 	// Combo window duration in seconds (time allowed to input next attack)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combo")
 	float ComboWindowTime = 3.f;
+
+	// Current combo type (set by subclass: LightAttack or HeavyAttack)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combo")
+	ERPGComboType ComboType = ERPGComboType::LightAttack;
 	
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Combo")
 	int32 CurrentLightAttackComboCount = 1;
-	
-	FTimerHandle ComboCountResetTimerHandle;
 
 	// Internal references
 	TWeakObjectPtr<UPlayerCombatComponent> CachedCombatComponent;

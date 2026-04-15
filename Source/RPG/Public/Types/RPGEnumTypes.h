@@ -49,6 +49,17 @@ enum class ERPGCombatState : uint8
 	Dead			UMETA(DisplayName = "死亡")
 };
 
+/**
+ * 连招攻击类型枚举
+ * 用于区分不同攻击类型的连招计数通道
+ */
+UENUM(BlueprintType)
+enum class ERPGComboType : uint8
+{
+	LightAttack		UMETA(DisplayName = "轻击"),
+	HeavyAttack		UMETA(DisplayName = "重击")
+};
+
 UENUM()
 enum class ERPGConfirmType : uint8
 {

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "PawnCombatComponent.h"
 #include "Types/RPGStructTypes.h"
+#include "Types/RPGEnumTypes.h"
 #include "PlayerCombatComponent.generated.h"
 
 class ARPGPlayerWeapon;
@@ -33,31 +34,41 @@ public:
 	virtual void OnHitTargetActor(AActor* HitActor) override;
 	virtual void OnWeaponPullerFromTargetActor(AActor* InteractedActor) override;
 
-	// 连招状态管理
+	// 连招状态管理（按攻击类型分通道）
 	UFUNCTION(BlueprintCallable, Category="RPG|Combo")
-	int32 GetCurrentComboCount() const { return CurrentComboCount; }
+	int32 GetComboCount(ERPGComboType ComboType) const;
 
 	UFUNCTION(BlueprintCallable, Category="RPG|Combo")
-	void SetCurrentComboCount(int32 NewCount) { CurrentComboCount = NewCount; }
+	void SetComboCount(ERPGComboType ComboType, int32 NewCount);
 
 	UFUNCTION(BlueprintCallable, Category="RPG|Combo")
-	void ResetComboCount();
+	void ResetComboCount(ERPGComboType ComboType);
 
 	UFUNCTION(BlueprintCallable, Category="RPG|Combo")
-	void AdvanceComboCount(int32 MaxComboCount);
+	void AdvanceComboCount(ERPGComboType ComboType, int32 MaxComboCount);
+
+	/** 切换攻击类型时重置对方计数器 */
+	UFUNCTION(BlueprintCallable, Category="RPG|Combo")
+	void SwitchComboType(ERPGComboType NewComboType);
+
+	/** 启动指定类型的连招窗口定时器 */
+	UFUNCTION(BlueprintCallable, Category="RPG|Combo")
+	void StartComboWindowTimer(ERPGComboType ComboType, float WindowTime);
 
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
-	// 连招状态
-	int32 CurrentComboCount = 1;
+	// 连招状态（按攻击类型分通道）
+	TMap<ERPGComboType, int32> ComboCounts;
 
-	// 连招窗口定时器
-	FTimerHandle ComboResetTimerHandle;
+	// 连招窗口定时器（按攻击类型分通道）
+	TMap<ERPGComboType, FTimerHandle> ComboResetTimers;
+
+	// 初始化默认连招计数
+	void InitComboCounts();
 
 	// 定时器回调
-	UFUNCTION()
-	void OnComboWindowTimerExpired();
+	void OnComboWindowTimerExpired(ERPGComboType ComboType);
 };

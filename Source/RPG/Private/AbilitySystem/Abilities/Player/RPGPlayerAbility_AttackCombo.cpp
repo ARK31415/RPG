@@ -37,8 +37,10 @@ void URPGPlayerAbility_AttackCombo::ActivateAbility(const FGameplayAbilitySpecHa
 	// 激活时从 CombatComponent 获取当前连招计数
 	if (UPlayerCombatComponent* CombatComp = GetCombatComponentFromActorInfo())
 	{
-		CurrentLightAttackComboCount = CombatComp->GetCurrentComboCount();
-		UE_LOG(LogRPGPlayerAbility_AttackCombo, Log, TEXT("[PlayerAttackCombo] Synced combo count from CombatComponent: %d"), CurrentLightAttackComboCount);
+		// 切换攻击类型：重置对方计数器
+		CombatComp->SwitchComboType(ComboType);
+		CurrentLightAttackComboCount = CombatComp->GetComboCount(ComboType);
+		UE_LOG(LogRPGPlayerAbility_AttackCombo, Log, TEXT("[PlayerAttackCombo] Synced combo count from CombatComponent (type %d): %d"), static_cast<uint8>(ComboType), CurrentLightAttackComboCount);
 	}
 
 	PlayCurrentComboMontage();
@@ -71,8 +73,8 @@ void URPGPlayerAbility_AttackCombo::EndAbility(const FGameplayAbilitySpecHandle 
 	// 能力结束时，将连招计数同步到 CombatComponent，并启动定时器
 	if (UPlayerCombatComponent* CombatComp = GetCombatComponentFromActorInfo())
 	{
-		CombatComp->SetCurrentComboCount(CurrentLightAttackComboCount);
-		UE_LOG(LogRPGPlayerAbility_AttackCombo, Log, TEXT("[PlayerAttackCombo] Synced combo count to CombatComponent: %d"), CurrentLightAttackComboCount);
+		CombatComp->SetComboCount(ComboType, CurrentLightAttackComboCount);
+		UE_LOG(LogRPGPlayerAbility_AttackCombo, Log, TEXT("[PlayerAttackCombo] Synced combo count to CombatComponent (type %d): %d"), static_cast<uint8>(ComboType), CurrentLightAttackComboCount);
 	}
 	
 	// 启动连招窗口定时器
@@ -169,9 +171,9 @@ void URPGPlayerAbility_AttackCombo::AdvanceComboCount()
 	// 使用 CombatComponent 管理连招计数
 	if (UPlayerCombatComponent* CombatComp = GetCombatComponentFromActorInfo())
 	{
-		CombatComp->AdvanceComboCount(MaxComboCount);
-		CurrentLightAttackComboCount = CombatComp->GetCurrentComboCount();
-		UE_LOG(LogRPGPlayerAbility_AttackCombo, Log, TEXT("[PlayerAttackCombo] Combo count advanced via CombatComponent: %d"), CurrentLightAttackComboCount);
+		CombatComp->AdvanceComboCount(ComboType, MaxComboCount);
+		CurrentLightAttackComboCount = CombatComp->GetComboCount(ComboType);
+		UE_LOG(LogRPGPlayerAbility_AttackCombo, Log, TEXT("[PlayerAttackCombo] Combo count advanced via CombatComponent (type %d): %d"), static_cast<uint8>(ComboType), CurrentLightAttackComboCount);
 	}
 	else
 	{
@@ -210,9 +212,9 @@ void URPGPlayerAbility_AttackCombo::ResetComboCount()
 	// 委托给 CombatComponent 处理
 	if (UPlayerCombatComponent* CombatComp = GetCombatComponentFromActorInfo())
 	{
-		CombatComp->ResetComboCount();
-		CurrentLightAttackComboCount = CombatComp->GetCurrentComboCount();
-		UE_LOG(LogRPGPlayerAbility_AttackCombo, Error, TEXT("[PlayerAttackCombo] Combo count reset via CombatComponent to: %d"), CurrentLightAttackComboCount);
+		CombatComp->ResetComboCount(ComboType);
+		CurrentLightAttackComboCount = CombatComp->GetComboCount(ComboType);
+		UE_LOG(LogRPGPlayerAbility_AttackCombo, Error, TEXT("[PlayerAttackCombo] Combo count reset via CombatComponent (type %d) to: %d"), static_cast<uint8>(ComboType), CurrentLightAttackComboCount);
 	}
 }
 
@@ -221,34 +223,7 @@ void URPGPlayerAbility_AttackCombo::StartComboWindowTimer()
 	// 委托给 CombatComponent 处理定时器
 	if (UPlayerCombatComponent* CombatComp = GetCombatComponentFromActorInfo())
 	{
-		AActor* Owner = CombatComp->GetOwner();
-		if (!Owner)
-		{
-			UE_LOG(LogRPGPlayerAbility_AttackCombo, Error, TEXT("[PlayerAttackCombo] ERROR: CombatComponent owner is null!"));
-			return;
-		}
-		
-		UWorld* World = Owner->GetWorld();
-		if (!World)
-		{
-			UE_LOG(LogRPGPlayerAbility_AttackCombo, Error, TEXT("[PlayerAttackCombo] ERROR: World is null!"));
-			return;
-		}
-		
-		// 清除旧定时器
-		World->GetTimerManager().ClearTimer(ComboCountResetTimerHandle);
-		
-		// 创建委托绑定到 CombatComponent 的定时器回调
-		FTimerDynamicDelegate TimerDelegate;
-		TimerDelegate.BindUFunction(CombatComp, FName("OnComboWindowTimerExpired"));
-		
-		World->GetTimerManager().SetTimer(
-			ComboCountResetTimerHandle,
-			TimerDelegate,
-			ComboWindowTime,
-			false
-		);
-		
-		UE_LOG(LogRPGPlayerAbility_AttackCombo, Log, TEXT("[PlayerAttackCombo] Combo window timer started on CombatComponent (%.2f seconds)"), ComboWindowTime);
+		CombatComp->StartComboWindowTimer(ComboType, ComboWindowTime);
+		UE_LOG(LogRPGPlayerAbility_AttackCombo, Log, TEXT("[PlayerAttackCombo] Combo window timer started via CombatComponent (type %d, %.2f seconds)"), static_cast<uint8>(ComboType), ComboWindowTime);
 	}
 }

@@ -5,6 +5,11 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogRPGAbility_HeavyAttackCombo, All, All)
 
+URPGPlayerAbility_HeavyAttack::URPGPlayerAbility_HeavyAttack()
+{
+	ComboType = ERPGComboType::HeavyAttack;
+}
+
 void URPGPlayerAbility_HeavyAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	const FGameplayAbilityActorInfo* ActorInfo,
 	const FGameplayAbilityActivationInfo ActivationInfo,

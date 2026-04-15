@@ -16,6 +16,9 @@ class RPG_API URPGPlayerAbility_HeavyAttack : public URPGPlayerAbility_AttackCom
 {
 	GENERATED_BODY()
 
+public:
+	URPGPlayerAbility_HeavyAttack();
+
 protected:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 };

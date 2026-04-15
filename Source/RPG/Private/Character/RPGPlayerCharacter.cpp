@@ -19,6 +19,8 @@
 #include "Items/Weapon/RPGPlayerWeapon.h"
 #include "Character/RPGPlayerState.h"
 #include "AbilitySystem/RPGAbilitySystemComponent.h"
+#include "DataAsset/Character/DataAsset_CharacterConfig.h"
+#include "AbilitySystem/RPGAttributeSet.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRPGPlayerCharacter, All, All)
 
@@ -337,8 +339,30 @@ void ARPGPlayerCharacter::InitializeCharacterConfig()
 	if (!CharacterConfig)
 	{
 		UE_LOG(LogRPGPlayerCharacter, Warning,
-		       TEXT("ARPGPlayerCharacter::InitializeCharacterConfig - CharacterConfig is null!"));
+		       TEXT("[%s] ARPGPlayerCharacter::InitializeCharacterConfig - CharacterConfig 为空，无法初始化角色属性"), *GetName());
 		return;
+	}
+
+	// 通过 PlayerState 获取 ASC，应用角色基础属性
+	if (ARPGPlayerState* PS = GetPlayerState<ARPGPlayerState>())
+	{
+		if (URPGAbilitySystemComponent* ASC = PS->GetRPGAbilitySystemComponent())
+		{
+			CharacterConfig->ApplyAttributesToASC(ASC, 1);
+			UE_LOG(LogRPGPlayerCharacter, Log,
+				TEXT("[%s] ARPGPlayerCharacter::InitializeCharacterConfig - 角色属性已应用到 ASC, Config=[%s]"),
+				*GetName(), *CharacterConfig->GetName());
+		}
+		else
+		{
+			UE_LOG(LogRPGPlayerCharacter, Error,
+				TEXT("[%s] ARPGPlayerCharacter::InitializeCharacterConfig - ASC 为空"), *GetName());
+		}
+	}
+	else
+	{
+		UE_LOG(LogRPGPlayerCharacter, Error,
+			TEXT("[%s] ARPGPlayerCharacter::InitializeCharacterConfig - PlayerState 为空"), *GetName());
 	}
 
 	// 装备默认武器
@@ -438,9 +462,23 @@ void ARPGPlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void ARPGPlayerCharacter::OnDebugTimerTick()
 {
-	UE_LOG(LogRPGPlayerCharacter, Error, 
-		TEXT("[ARPGPlayerCharacter] Debug Timer Tick - Actor: %s, Location: %s, ComboCount: %d"),
+	UE_LOG(LogRPGPlayerCharacter, Log, 
+		TEXT("[%s] Debug Timer Tick - Location: %s, LightCombo: %d, HeavyCombo: %d"),
 		*GetName(),
 		*GetActorLocation().ToString(),
-		PlayerCombatComponent ? PlayerCombatComponent->GetCurrentComboCount() : -1);
+		PlayerCombatComponent ? PlayerCombatComponent->GetComboCount(ERPGComboType::LightAttack) : -1,
+		PlayerCombatComponent ? PlayerCombatComponent->GetComboCount(ERPGComboType::HeavyAttack) : -1);
+
+	// 输出当前属性值用于验证初始化
+	if (const URPGAttributeSet* AS = Cast<URPGAttributeSet>(AttributeSet))
+	{
+		UE_LOG(LogRPGPlayerCharacter, Log,
+			TEXT("[%s] Attributes - Str=%.1f Int=%.1f Vit=%.1f Agi=%.1f | HP=%.1f/%.1f Rage=%.1f/%.1f Mana=%.1f/%.1f | ATK=%.1f DEF=%.1f"),
+			*GetName(),
+			AS->GetStrength(), AS->GetIntelligence(), AS->GetVitality(), AS->GetAgility(),
+			AS->GetCurrentHealth(), AS->GetMaxHealth(),
+			AS->GetCurrentRage(), AS->GetMaxRage(),
+			AS->GetCurrentMana(), AS->GetMaxMana(),
+			AS->GetAttackPower(), AS->GetDefensePower());
+	}
 }
