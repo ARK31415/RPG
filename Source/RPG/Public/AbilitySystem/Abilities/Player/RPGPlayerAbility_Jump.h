@@ -6,6 +6,8 @@
 #include "AbilitySystem/Abilities/RPGPlayerGameplayAbility.h"
 #include "RPGPlayerAbility_Jump.generated.h"
 
+class UAbilityTask_WaitGameplayEvent;
+
 /**
  * 玩家跳跃Ability
  * 职责：跳跃判定、跳跃状态Tag管理、执行跳跃
@@ -13,6 +15,7 @@
  * 设计原则：
  * - Character管理土狼时间状态，Ability查询Character::CanJump()进行判定
  * - 使用Player_Status_Jumping Tag标记跳跃状态，供其他系统查询
+ * - Ability生命周期与跳跃动画同步，通过Event.Jump.Finished事件结束
  */
 UCLASS()
 class RPG_API URPGPlayerAbility_Jump : public URPGPlayerGameplayAbility
@@ -42,7 +45,11 @@ protected:
 									const FGameplayTagContainer* TargetTags = nullptr, 
 									FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
 
-
+	// ========== Event回调 ==========
+	
+	/** 接收跳跃完成事件（AN_JumpFinish触发） */
+	UFUNCTION()
+	void OnJumpFinishedEventReceived(FGameplayEventData EventData);
 
 private:
 	// ========== 核心逻辑 ==========
@@ -61,4 +68,13 @@ private:
 
 	/** 获取玩家角色 */
 	ARPGPlayerCharacter* GetPlayerCharacter() const;
+
+	/** 设置跳跃完成事件监听 */
+	void SetupJumpFinishedEventWait();
+
+	// ========== 缓存Task ==========
+	
+	/** 等待跳跃完成事件的Task */
+	UPROPERTY()
+	UAbilityTask_WaitGameplayEvent* JumpFinishedEventTask;
 };

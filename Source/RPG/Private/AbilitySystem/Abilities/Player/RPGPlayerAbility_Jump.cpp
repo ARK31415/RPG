@@ -6,10 +6,12 @@
 #include "RPGGameplayTags.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "AbilitySystem/RPGAbilitySystemComponent.h"
+#include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRPGJumpAbility, Log, All)
 
 URPGPlayerAbility_Jump::URPGPlayerAbility_Jump()
+	: JumpFinishedEventTask(nullptr)
 {
 	// 实例策略：每个Actor一个实例
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
@@ -35,9 +37,11 @@ void URPGPlayerAbility_Jump::ActivateAbility(const FGameplayAbilitySpecHandle Ha
 	// 执行跳跃
 	PerformJump();
 	
-	// 注意：不调用Super::ActivateAbility，因为我们不需要等待动画结束
-	// 跳跃是瞬时动作，执行完毕后立即结束Ability
-	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
+	// 设置跳跃完成事件监听（等待AN_JumpFinish触发）
+	SetupJumpFinishedEventWait();
+	
+	// 注意：不调用EndAbility，等待Event.Jump.Finished事件触发后才结束
+	// 这样确保Player_Status_Jumping Tag在整个跳跃过程中持续存在
 }
 
 void URPGPlayerAbility_Jump::EndAbility(const FGameplayAbilitySpecHandle Handle, 
@@ -52,6 +56,13 @@ void URPGPlayerAbility_Jump::EndAbility(const FGameplayAbilitySpecHandle Handle,
 
 	// 移除跳跃状态Tag
 	RemoveJumpingTag();
+	
+	// 清理Event监听Task
+	if (JumpFinishedEventTask)
+	{
+		JumpFinishedEventTask = nullptr;
+		UE_LOG(LogRPGJumpAbility, Log, TEXT("[JumpAbility] Cleared JumpFinishedEventTask"));
+	}
 	
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
@@ -137,4 +148,35 @@ ARPGPlayerCharacter* URPGPlayerAbility_Jump::GetPlayerCharacter() const
 		return Cast<ARPGPlayerCharacter>(CurrentActorInfo->AvatarActor.Get());
 	}
 	return nullptr;
+}
+
+void URPGPlayerAbility_Jump::SetupJumpFinishedEventWait()
+{
+	// 创建等待GameplayEvent的Task
+	JumpFinishedEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+		this,
+		RPGGameplayTags::Player_Event_Jump_Finished,
+		nullptr,
+		false // 不需要精确匹配
+	);
+	
+	if (JumpFinishedEventTask)
+	{
+		JumpFinishedEventTask->EventReceived.AddDynamic(this, &URPGPlayerAbility_Jump::OnJumpFinishedEventReceived);
+		JumpFinishedEventTask->ReadyForActivation();
+		
+		UE_LOG(LogRPGJumpAbility, Log, TEXT("[JumpAbility] SetupJumpFinishedEventWait - Event listener activated"));
+	}
+	else
+	{
+		UE_LOG(LogRPGJumpAbility, Error, TEXT("[JumpAbility] SetupJumpFinishedEventWait - Failed to create WaitGameplayEvent task"));
+	}
+}
+
+void URPGPlayerAbility_Jump::OnJumpFinishedEventReceived(FGameplayEventData EventData)
+{
+	UE_LOG(LogRPGJumpAbility, Log, TEXT("[JumpAbility] OnJumpFinishedEventReceived - Jump finished event triggered by AN_JumpFinish"));
+	
+	// 收到跳跃完成事件，结束Ability
+	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, false);
 }

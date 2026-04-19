@@ -30,6 +30,7 @@ namespace RPGGameplayTags
 	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Event_Equip_Sword);
 	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Event_Unequip_Sword);
 	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Event_HitPause);
+	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Event_Jump_Finished);
 
 	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Status_JumpToFinish);
 	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Status_Jumping);
