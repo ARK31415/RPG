@@ -90,6 +90,62 @@ struct FCharacterBaseAttributes
 	float DefensePower = 5.0f;
 };
 
+/**
+ * 敌人类型枚举
+ */
+UENUM(BlueprintType)
+enum class EEnemyType : uint8
+{
+	Normal  UMETA(DisplayName = "普通敌人"),
+	Elite   UMETA(DisplayName = "精英敌人"),
+	Boss    UMETA(DisplayName = "Boss"),
+	Minion  UMETA(DisplayName = "小怪")
+};
+
+/**
+ * 敌人基础属性结构体
+ * 与玩家属性对称设计，但针对敌人特点简化（无蓝量/怒气，增加抗性等）
+ */
+USTRUCT(BlueprintType)
+struct FEnemyBaseAttributes
+{
+	GENERATED_BODY()
+
+	// 核心资源（敌人通常只需要 HP）
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vital Attributes")
+	float MaxHealth = 100.0f;
+
+	// 战斗属性
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat Attributes")
+	float AttackPower = 10.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat Attributes")
+	float DefensePower = 5.0f;
+
+	// 敌人特有属性 - 抗性系统（类魂游戏核心机制）
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resistance Attributes")
+	float Armor = 0.0f;                    // 护甲减伤
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resistance Attributes")
+	float MagicResistance = 0.0f;          // 魔抗
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resistance Attributes")
+	float StaggerResistance = 0.0f;        // 硬直抗性（类魂）
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resistance Attributes")
+	float PoisonResistance = 0.0f;         // 毒抗
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resistance Attributes")
+	float BleedResistance = 0.0f;          // 流血抗性
+
+	// 掉落相关（非 GAS 属性，但在 DataAsset 中统一管理）
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Drop")
+	int32 GoldDrop = 10;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Drop")
+	int32 EXPDrop = 50;
+};
+
 USTRUCT(BlueprintType)
 struct FRPGPlayerAbilitySet
 {

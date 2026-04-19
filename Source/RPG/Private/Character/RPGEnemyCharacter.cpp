@@ -6,6 +6,7 @@
 #include "AbilitySystem/RPGAttributeSet.h"
 #include "Component/Combat/EnemyCombatComponent.h"
 #include "DataAsset/StartUpDate/DataAsset_EnemyStartUpData.h"
+#include "DataAsset/Character/DataAsset_EnemyConfig.h"
 
 ARPGEnemyCharacter::ARPGEnemyCharacter()
 {
@@ -37,6 +38,9 @@ void ARPGEnemyCharacter::BeginPlay()
 		RPGAbilitySystemComponent->InitAbilityActorInfo(this, this);
 	}
 
+	// 初始化敌人配置（属性）
+	InitializeEnemyConfig();
+
 	// Initialize startup data (grant abilities and effects)
 	InitializeStartupData();
 }
@@ -50,4 +54,25 @@ void ARPGEnemyCharacter::InitializeStartupData()
 
 	// Grant abilities and effects from startup data
 	EnemyStartUpData->GiveToAbilitySystemComponent(RPGAbilitySystemComponent, 1);
+}
+
+void ARPGEnemyCharacter::InitializeEnemyConfig()
+{
+	if (!EnemyConfig)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[%s] InitializeEnemyConfig - EnemyConfig 为空，无法初始化敌人属性"), *GetName());
+		return;
+	}
+
+	if (!RPGAbilitySystemComponent)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[%s] InitializeEnemyConfig - ASC 为空"), *GetName());
+		return;
+	}
+
+	// 应用敌人属性到 ASC
+	EnemyConfig->ApplyAttributesToASC(RPGAbilitySystemComponent, 1);
+
+	UE_LOG(LogTemp, Log, TEXT("[%s] InitializeEnemyConfig - 敌人属性已应用到 ASC, Config=[%s]"),
+		*GetName(), *EnemyConfig->GetName());
 }

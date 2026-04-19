@@ -25,7 +25,9 @@
 DEFINE_LOG_CATEGORY_STATIC(LogRPGPlayerCharacter, All, All)
 
 ARPGPlayerCharacter::ARPGPlayerCharacter()
-	: BaseTurnSpeed(180.f)
+	: CoyoteTime(0.15f)
+	, bInCoyoteTime(false)
+	, BaseTurnSpeed(180.f)
 	, MaxTurnSpeed(720.f)
 	, SpeedTurnMultiplier(1.0f)
 	, AngleTurnMultiplier(0.5f)
@@ -455,9 +457,71 @@ void ARPGPlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	if (GetWorld())
 	{
 		GetWorld()->GetTimerManager().ClearTimer(DebugTimerHandle);
+		GetWorld()->GetTimerManager().ClearTimer(CoyoteTimerHandle);
 	}
 	
 	Super::EndPlay(EndPlayReason);
+}
+
+void ARPGPlayerCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
+{
+	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
+
+	const EMovementMode CurrentMode = GetCharacterMovement()->MovementMode;
+
+	if (PrevMovementMode == MOVE_Walking && CurrentMode == MOVE_Falling)
+	{
+		// 刚离开地面，启动土狼时间
+		StartCoyoteTimer();
+	}
+	else if (CurrentMode == MOVE_Walking)
+	{
+		// 落地，重置土狼时间
+		ResetCoyoteTimer();
+	}
+}
+
+bool ARPGPlayerCharacter::CanJumpInternal_Implementation() const
+{
+	// 在地面：调用原生判定
+	if (Super::CanJumpInternal_Implementation())
+	{
+		return true;
+	}
+
+	// 不在地面：检查土狼时间
+	return bInCoyoteTime;
+}
+
+void ARPGPlayerCharacter::StartCoyoteTimer()
+{
+	if (!GetWorld()) return;
+
+	GetWorld()->GetTimerManager().ClearTimer(CoyoteTimerHandle);
+
+	bInCoyoteTime = true;
+
+	GetWorld()->GetTimerManager().SetTimer(
+		CoyoteTimerHandle,
+		this,
+		&ARPGPlayerCharacter::OnCoyoteTimeExpired,
+		CoyoteTime,
+		false
+	);
+}
+
+void ARPGPlayerCharacter::ResetCoyoteTimer()
+{
+	if (GetWorld())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(CoyoteTimerHandle);
+	}
+	bInCoyoteTime = false;
+}
+
+void ARPGPlayerCharacter::OnCoyoteTimeExpired()
+{
+	bInCoyoteTime = false;
 }
 
 void ARPGPlayerCharacter::OnDebugTimerTick()

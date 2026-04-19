@@ -37,6 +37,12 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
+	// 重写移动模式变化回调，用于土狼时间触发
+	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode = 0) override;
+
+	// 重写跳跃判定，集成土狼时间
+	virtual bool CanJumpInternal_Implementation() const override;
+
 	// 服务端：Controller Possess 时初始化 ASC ActorInfo
 	virtual void PossessedBy(AController* NewController) override;
 
@@ -66,6 +72,28 @@ public:
 	UPlayerCombatComponent* GetPlayerCombatComponent() const;
 
 private:
+	// ========== 跳跃系统（土狼时间） ==========
+	
+	/** 土狼时间（秒）- 离开地面后仍可跳跃的时间窗口 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Jump", meta=(AllowPrivateAccess = "true", ClampMin = "0.0", ClampMax = "1.0"))
+	float CoyoteTime;
+
+	/** 土狼时间定时器句柄 */
+	FTimerHandle CoyoteTimerHandle;
+
+	/** 是否处于土狼时间窗口内 */
+	bool bInCoyoteTime;
+
+	/** 启动土狼时间定时器 */
+	void StartCoyoteTimer();
+
+	/** 重置土狼时间 */
+	void ResetCoyoteTimer();
+
+	/** 土狼时间到期回调 */
+	UFUNCTION()
+	void OnCoyoteTimeExpired();
+
 	//相机
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta=(AllowPrivateAccess = "true"))
 	USpringArmComponent* CameraBoom;

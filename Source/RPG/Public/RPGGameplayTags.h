@@ -14,6 +14,7 @@ namespace RPGGameplayTags
 	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_LightAttack_Sword);
 	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_HeavyAttack_Sword);
 	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Roll);
+	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(InputTag_Jump);
 
 	//Player Tags
 	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Equip_Sword);
@@ -22,6 +23,7 @@ namespace RPGGameplayTags
 	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Attack_Heavy_Sword);
 	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_HitPause);
 	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Roll);
+	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Ability_Jump);
 	
 	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Weapon_Sword);
 	
@@ -30,6 +32,7 @@ namespace RPGGameplayTags
 	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Event_HitPause);
 
 	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Status_JumpToFinish);
+	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Status_Jumping);
 	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_Status_Rolling);
 
 	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Player_SetByCaller_AttackType_Light);

@@ -38,26 +38,26 @@ protected:
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 
 	// 核心运动参数（C++ 计算，蓝图读取）
-	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "AnimData|LocomotionData")
 	float GroundSpeed;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "AnimData|LocomotionData")
 	float Direction;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "AnimData|LocomotionData")
 	FVector Velocity;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "AnimData|LocomotionData")
 	float VerticalSpeed;
 
 	// 状态标志
-	UPROPERTY(BlueprintReadOnly, Category = "State")
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "AnimData|StateData")
 	bool bIsMoving;
 
-	UPROPERTY(BlueprintReadOnly, Category = "State")
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "AnimData|StateData")
 	bool bIsFalling;
 
-	UPROPERTY(BlueprintReadOnly, Category = "State")
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadOnly, Category = "AnimData|StateData")
 	bool bIsGrounded;
 
 private:

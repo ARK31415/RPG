@@ -9,6 +9,7 @@
 class URPGAbilitySystemComponent;
 class URPGAttributeSet;
 class UDataAsset_EnemyStartUpData;
+class UDataAsset_EnemyConfig;
 
 /**
  * Enemy Character Base Class - 用于敌人的ASC和属性管理
@@ -52,9 +53,16 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "RPG|Startup", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UDataAsset_EnemyStartUpData> EnemyStartUpData;
 
+	// Enemy config for attributes (独立于 StartupData)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "RPG|EnemyConfig", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UDataAsset_EnemyConfig> EnemyConfig;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat", meta=(AllowPrivateAccess = "true"))
 	UEnemyCombatComponent* EnemyCombatComponent;
 
 	// Initialize startup data (grant abilities and effects)
 	void InitializeStartupData();
+
+	// Initialize enemy config (apply attributes to ASC)
+	void InitializeEnemyConfig();
 };
