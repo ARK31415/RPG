@@ -112,6 +112,12 @@ void URPGCharacterAnimInstance::UnlinkAnimLayer()
 	}
 }
 
+void URPGCharacterAnimInstance::OnJumpAnimationFinished()
+{
+	bJumpAnimationFinished = true;
+	UE_LOG(LogRPGCharacterAnimInstance, Log, TEXT("[JumpAnimation] Jump animation finished notification received"));
+}
+
 // ========== 跳跃状态系统 ==========
 
 void URPGCharacterAnimInstance::UpdateJumpState(float DeltaSeconds)
@@ -160,6 +166,9 @@ void URPGCharacterAnimInstance::UpdateJumpState(float DeltaSeconds)
 				bJumpAnimationFinished = false;
 				bWasFallingLastFrame = false;  // 重置帧状态
 				bWasGroundedLastFrame = true;
+						
+				UE_LOG(LogRPGCharacterAnimInstance, Log, TEXT("[JumpState] Final State - CurrentJumpState: %d, bIsJumping: %d"), 
+					(uint8)CurrentJumpState, bIsJumping);
 			}
 			else
 			{

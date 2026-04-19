@@ -108,6 +108,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Linked Layers")
 	void UnlinkAnimLayer();
 
+	// 动画通知：跳跃动画播放完成
+	UFUNCTION(BlueprintCallable, Category = "Jump Animation")
+	void OnJumpAnimationFinished();
+
 private:
 	void UpdateMovementState();
 	void UpdateGaitAmount();
