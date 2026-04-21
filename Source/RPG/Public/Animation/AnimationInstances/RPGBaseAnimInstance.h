@@ -26,6 +26,9 @@ public:
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 
 protected:
+	UFUNCTION(BlueprintPure, meta = (BlueprintThreadSafe))
+	bool DoesOwnerHaveTag(FGameplayTag TagToCheck) const;
+	
 	// 角色引用
 	UPROPERTY(BlueprintReadOnly, Category = "References")
 	TObjectPtr<ACharacter> OwningCharacter;
@@ -62,4 +65,6 @@ protected:
 
 private:
 	void UpdateLocomotionParameters();
+
+	
 };

@@ -6,10 +6,13 @@
 #include "Character/BaseCharacter.h"
 #include "RPGEnemyCharacter.generated.h"
 
+class UEnemyCombatComponent;
 class URPGAbilitySystemComponent;
 class URPGAttributeSet;
 class UDataAsset_EnemyStartUpData;
 class UDataAsset_EnemyConfig;
+class UBehaviorTree;
+class ARPGEnemyAIController;
 
 /**
  * Enemy Character Base Class - 用于敌人的ASC和属性管理
@@ -30,7 +33,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "RPG|AbilitySystem")
 	URPGAbilitySystemComponent* GetRPGAbilitySystemComponent() const { return RPGAbilitySystemComponent; }
 
-	/** 获取玩家战斗组件 */
+	/** 获取敌人战斗组件 */
 	UFUNCTION(BlueprintPure, Category = "Combat")
 	UEnemyCombatComponent* GetEnemyCombatComponent() const;
 	
@@ -39,6 +42,9 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+
+	// AI Controller 接管时初始化行为树
+	virtual void PossessedBy(AController* NewController) override;
 
 private:
 	// Ability System Component for enemy
@@ -59,6 +65,13 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Combat", meta=(AllowPrivateAccess = "true"))
 	UEnemyCombatComponent* EnemyCombatComponent;
+
+	// 敌人AI行为树（在编辑器中指定）
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "RPG|AI", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UBehaviorTree> EnemyBehaviorTree;
+
+	// 缓存的AI控制器引用
+	TWeakObjectPtr<ARPGEnemyAIController> CachedAIController;
 
 	// Initialize startup data (grant abilities and effects)
 	void InitializeStartupData();

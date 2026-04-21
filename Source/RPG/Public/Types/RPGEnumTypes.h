@@ -80,3 +80,15 @@ enum class ERPGSuccessType : uint8
 	Successful,
 	Failed
 };
+
+/**
+ * 敌人受击方向枚举
+ */
+UENUM(BlueprintType)
+enum class EEnemyHitReactDirection : uint8
+{
+	Front	UMETA(DisplayName = "正面"),
+	Back	UMETA(DisplayName = "背面"),
+	Left	UMETA(DisplayName = "左侧"),
+	Right	UMETA(DisplayName = "右侧")
+};

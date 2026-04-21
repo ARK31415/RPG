@@ -5,6 +5,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
+#include "RPGFunctionLibrary.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerState.h"
@@ -61,6 +62,16 @@ void URPGBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	}
 
 	UpdateLocomotionParameters();
+}
+
+bool URPGBaseAnimInstance::DoesOwnerHaveTag(FGameplayTag TagToCheck) const
+{
+	if(APawn* OwningPawn = TryGetPawnOwner())
+	{
+		return URPGFunctionLibrary::NativeDoesActorHasTag(OwningPawn, TagToCheck);
+	}
+
+	return false;
 }
 
 void URPGBaseAnimInstance::UpdateLocomotionParameters()

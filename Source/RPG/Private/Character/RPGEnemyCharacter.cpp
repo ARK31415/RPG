@@ -7,12 +7,33 @@
 #include "Component/Combat/EnemyCombatComponent.h"
 #include "DataAsset/StartUpDate/DataAsset_EnemyStartUpData.h"
 #include "DataAsset/Character/DataAsset_EnemyConfig.h"
+#include "Controllers/RPGEnemyAIController.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "BehaviorTree/BehaviorTree.h"
 
 ARPGEnemyCharacter::ARPGEnemyCharacter()
 {
+	// 敌人自动被AI控制器接管（放置在世界或生成时）
+	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+
+	// 指定默认AI控制器类
+	AIControllerClass = ARPGEnemyAIController::StaticClass();
+
+	bUseControllerRotationPitch = false;
+	bUseControllerRotationRoll = false;
+	bUseControllerRotationYaw = false;
+
+	GetCharacterMovement()->bUseControllerDesiredRotation = false;
+	GetCharacterMovement()->bOrientRotationToMovement = true;
+	GetCharacterMovement()->RotationRate = FRotator(0.f,180.f,0.f);
+	GetCharacterMovement()->MaxWalkSpeed = 300.f;
+	GetCharacterMovement()->BrakingDecelerationWalking = 1000.f;
+
 	// Create ability system component on the character itself (for enemies)
 	RPGAbilitySystemComponent = CreateDefaultSubobject<URPGAbilitySystemComponent>(TEXT("RPGAbilitySystemComponent"));
 	RPGAbilitySystemComponent->SetIsReplicated(true);
+
+	EnemyCombatComponent = CreateDefaultSubobject<UEnemyCombatComponent>("EnemyCombatComponent");
 
 	// Create attribute set
 	RPGAttributeSet = CreateDefaultSubobject<URPGAttributeSet>(TEXT("RPGAttributeSet"));
@@ -43,6 +64,26 @@ void ARPGEnemyCharacter::BeginPlay()
 
 	// Initialize startup data (grant abilities and effects)
 	InitializeStartupData();
+}
+
+void ARPGEnemyCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+
+	// 缓存AI控制器并启动行为树
+	ARPGEnemyAIController* AIController = Cast<ARPGEnemyAIController>(NewController);
+	if (AIController && EnemyBehaviorTree)
+	{
+		CachedAIController = AIController;
+		AIController->RunBehaviorTreeWithBlackboard(EnemyBehaviorTree);
+
+		UE_LOG(LogTemp, Log, TEXT("[%s] PossessedBy - AI控制器[%s]已接管，行为树[%s]已启动"),
+			*GetName(), *AIController->GetName(), *EnemyBehaviorTree->GetName());
+	}
+	else if (!EnemyBehaviorTree)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[%s] PossessedBy - EnemyBehaviorTree 未指定，AI将不会行动"), *GetName());
+	}
 }
 
 void ARPGEnemyCharacter::InitializeStartupData()
