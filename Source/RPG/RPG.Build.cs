@@ -68,7 +68,9 @@ public class RPG : ModuleRules
 				"ControlFlows",
 				
 				// 提供动态访问和修改对象属性
-				"PropertyPath"
+				"PropertyPath",
+				
+				"CommonGame"
 				
 			}
 		);

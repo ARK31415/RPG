@@ -11,16 +11,3 @@ ARPGEnemyWeapon::ARPGEnemyWeapon()
 	PrimaryActorTick.bCanEverTick = true;
 }
 
-// Called when the game starts or when spawned
-void ARPGEnemyWeapon::BeginPlay()
-{
-	Super::BeginPlay();
-	
-}
-
-// Called every frame
-void ARPGEnemyWeapon::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-}
-
