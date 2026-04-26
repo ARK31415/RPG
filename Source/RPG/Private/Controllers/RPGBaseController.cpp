@@ -3,3 +3,7 @@
 
 #include "Controllers/RPGBaseController.h"
 
+ARPGBaseController::ARPGBaseController()
+{
+}
+

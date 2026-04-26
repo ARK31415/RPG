@@ -19,6 +19,8 @@ ARPGEnemyAIController::ARPGEnemyAIController(const FObjectInitializer& ObjectIni
 
 	// 设置Blackboard为AIController的默认Blackboard
 	Blackboard = BlackboardComp;
+
+	SetGenericTeamId(FGenericTeamId(1));
 }
 
 void ARPGEnemyAIController::BeginPlay()

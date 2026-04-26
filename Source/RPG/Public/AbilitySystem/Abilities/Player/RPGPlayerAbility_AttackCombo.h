@@ -5,7 +5,10 @@
 #include "Types/RPGEnumTypes.h"
 #include "RPGPlayerAbility_AttackCombo.generated.h"
 
+class UAbilityTask_WaitGameplayEvent;
 class UPlayerCombatComponent;
+class UGameplayEffect;
+class URPGAttributeSet;
 
 /**
  * Player Attack Combo Base Class
@@ -65,6 +68,14 @@ protected:
 	UFUNCTION()
 	virtual void StartComboWindowTimer();
 
+	// Handle MeleeHit event and apply damage (Warrior pattern)
+	UFUNCTION()
+	virtual void HandleApplyDamage(FGameplayEventData EventData);
+
+	// Send HitReact event to target
+	UFUNCTION()
+	virtual void SendHitReactEvent(AActor* TargetActor, FGameplayEventData EventData);
+
 protected:
 	// Combo montages sequence (set in Blueprint subclass CDO)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combo")
@@ -87,4 +98,11 @@ protected:
 
 	// Internal references
 	TWeakObjectPtr<UPlayerCombatComponent> CachedCombatComponent;
+
+	// Wait GameplayEvent task reference (for cleanup)
+	UAbilityTask_WaitGameplayEvent* WaitMeleeHitEventTask = nullptr;
+
+	// Damage GameplayEffect class (set in Blueprint or CDO)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Damage")
+	TSubclassOf<UGameplayEffect> DamageEffectClass;
 };

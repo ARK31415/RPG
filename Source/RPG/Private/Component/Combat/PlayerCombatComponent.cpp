@@ -118,6 +118,12 @@ void UPlayerCombatComponent::StartComboWindowTimer(ERPGComboType ComboType, floa
 	UE_LOG(LogRPGPlayerCombatComponent, Log, TEXT("[PlayerCombatComponent] Combo window timer started for type %d (%.2f seconds)"), static_cast<uint8>(ComboType), WindowTime);
 }
 
+void UPlayerCombatComponent::SetCurrentComboType(ERPGComboType Type)
+{
+	CurrentComboType = Type;
+	UE_LOG(LogRPGPlayerCombatComponent, Log, TEXT("[PlayerCombatComponent] Set CurrentComboType to %d"), static_cast<uint8>(Type));
+}
+
 void UPlayerCombatComponent::OnComboWindowTimerExpired(ERPGComboType ComboType)
 {
 	UE_LOG(LogRPGPlayerCombatComponent, Warning, TEXT("[PlayerCombatComponent] >>> Combo window timer expired for type %d, resetting combo <<<"), static_cast<uint8>(ComboType));
@@ -155,6 +161,8 @@ void UPlayerCombatComponent::OnHitTargetActor(AActor* HitActor)
 	FGameplayEventData Data;
 	Data.Instigator = GetOwningPawn();
 	Data.Target = HitActor;
+
+	UE_LOG(LogRPGPlayerCombatComponent, Log, TEXT("[PlayerCombatComponent] OnHitTargetActor: %s"), *HitActor->GetName());
 
 	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
 		GetOwningPawn(),

@@ -9,19 +9,31 @@
 #include "RPGGameplayTags.h"
 #include "Interface/PawnCombatInterface.h"
 
+DEFINE_LOG_CATEGORY_STATIC(LogRPGFunctionLibrary,All,All)
+
 URPGAbilitySystemComponent* URPGFunctionLibrary::NativeGetRPGASCFromActor(AActor* InActor)
 {
-	check(InActor);
+	// Return nullptr if InActor is invalid (supports editor preview)
+	if (!InActor)
+	{
+		UE_LOG(LogRPGFunctionLibrary, Error, TEXT("InActor is nullptr") /*, InActor*/)
+		return nullptr;
+	}
 
 	// Character and Enemy both implement IAbilitySystemInterface now
 	UAbilitySystemComponent* ASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(InActor);
 
-	return CastChecked<URPGAbilitySystemComponent>(ASC);
+	return Cast<URPGAbilitySystemComponent>(ASC);
 }
 
 void URPGFunctionLibrary::AddGameplayTagToActorIfNone(AActor* InActor, FGameplayTag TagToAdd)
 {
 	URPGAbilitySystemComponent* ASC = NativeGetRPGASCFromActor(InActor);
+	if (!ASC)
+	{
+		UE_LOG(LogRPGFunctionLibrary, Error, TEXT("ASC is nullptr") /*, ASC*/)
+		return;
+	}
 
 	if (!ASC->HasMatchingGameplayTag(TagToAdd))
 	{
@@ -32,6 +44,11 @@ void URPGFunctionLibrary::AddGameplayTagToActorIfNone(AActor* InActor, FGameplay
 void URPGFunctionLibrary::RemoveGameplayFromActorIfFound(AActor* InActor, FGameplayTag TagToRemove)
 {
 	URPGAbilitySystemComponent* ASC = NativeGetRPGASCFromActor(InActor);
+	if (!ASC)
+	{
+		UE_LOG(LogRPGFunctionLibrary, Error, TEXT("ASC is nullptr") /*, ASC*/)
+		return;
+	}
 
 	if (ASC->HasMatchingGameplayTag(TagToRemove))
 	{
@@ -42,6 +59,11 @@ void URPGFunctionLibrary::RemoveGameplayFromActorIfFound(AActor* InActor, FGamep
 bool URPGFunctionLibrary::NativeDoesActorHasTag(AActor* InActor, FGameplayTag TagToCheck)
 {
 	URPGAbilitySystemComponent* ASC = NativeGetRPGASCFromActor(InActor);
+	if (!ASC)
+	{
+		UE_LOG(LogRPGFunctionLibrary, Error, TEXT("ASC is nullptr") /*, ASC*/)
+		return false;
+	}
 
 	return ASC->HasMatchingGameplayTag(TagToCheck);
 }
@@ -53,7 +75,12 @@ void URPGFunctionLibrary::BP_DoesActorHasTag(AActor* InActor, FGameplayTag TagTo
 
 UPawnCombatComponent* URPGFunctionLibrary::NativeGetPawnCombatComponentFromActor(AActor* InActor)
 {
-	check(InActor)
+	// Use safe check instead of hard assertion to support editor preview
+	if (!InActor)
+	{
+		UE_LOG(LogRPGFunctionLibrary, Error, TEXT("InActor is nullptr") /*, InActor*/)
+		return nullptr;
+	}
 
 	if (IPawnCombatInterface* PawnCombatInterface = Cast<IPawnCombatInterface>(InActor))
 	{

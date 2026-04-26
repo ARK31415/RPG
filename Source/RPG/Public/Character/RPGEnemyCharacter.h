@@ -33,12 +33,21 @@ public:
 	UFUNCTION(BlueprintPure, Category = "RPG|AbilitySystem")
 	URPGAbilitySystemComponent* GetRPGAbilitySystemComponent() const { return RPGAbilitySystemComponent; }
 
-	/** 获取敌人战斗组件 */
+	virtual UPawnCombatComponent* GetPawnCombatComponent() const override;
+	
+	/*/** 获取敌人战斗组件 #1#
 	UFUNCTION(BlueprintPure, Category = "Combat")
-	UEnemyCombatComponent* GetEnemyCombatComponent() const;
+	UEnemyCombatComponent* GetEnemyCombatComponent() const;*/
 	
 	UFUNCTION(BlueprintPure, Category = "RPG|AbilitySystem")
 	URPGAttributeSet* GetRPGAttributeSet() const { return RPGAttributeSet; }
+
+	/**
+	 * 敌人死亡处理
+	 * 设置死亡Tag、禁用AI和战斗组件、播放死亡动画、延迟销毁
+	 */
+	UFUNCTION(BlueprintCallable, Category = "RPG|Enemy")
+	virtual void Die();
 
 protected:
 	virtual void BeginPlay() override;
@@ -78,4 +87,7 @@ private:
 
 	// Initialize enemy config (apply attributes to ASC)
 	void InitializeEnemyConfig();
+
+public:
+	FORCEINLINE UEnemyCombatComponent* GetEnemyCombatComponent() const{return EnemyCombatComponent;}
 };

@@ -68,8 +68,10 @@ public:
 	UDataAsset_CharacterConfig* GetCharacterConfig() const { return CharacterConfig; }
 
 	/** 获取玩家战斗组件 */
-	UFUNCTION(BlueprintPure, Category = "Combat")
-	UPlayerCombatComponent* GetPlayerCombatComponent() const;
+	/*UFUNCTION(BlueprintPure, Category = "Combat")
+	UPlayerCombatComponent* GetPlayerCombatComponent() const;*/
+
+	virtual UPawnCombatComponent* GetPawnCombatComponent() const override;
 
 private:
 	// ========== 跳跃系统（土狼时间） ==========
@@ -173,4 +175,7 @@ private:
 	void Input_Look(const FInputActionValue& InputActionValue);
 	void Input_AbilityInputPressed(FGameplayTag InputTag);
 	void Input_AbilityInputReleased(FGameplayTag InputTag);
+
+public:
+	FORCEINLINE UPlayerCombatComponent* GetPlayerCombatComponent() const {return PlayerCombatComponent;}
 };

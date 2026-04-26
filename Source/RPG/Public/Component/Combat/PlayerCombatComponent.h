@@ -55,6 +55,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category="RPG|Combo")
 	void StartComboWindowTimer(ERPGComboType ComboType, float WindowTime);
 
+	/** 获取当前攻击类型 (蓝图GA用于伤害计算) */
+	UFUNCTION(BlueprintCallable, Category="RPG|Combo")
+	ERPGComboType GetCurrentComboType() const { return CurrentComboType; }
+
+	/** 设置当前攻击类型 (攻击GA开始时调用) */
+	UFUNCTION(BlueprintCallable, Category="RPG|Combo")
+	void SetCurrentComboType(ERPGComboType Type);
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -65,6 +73,9 @@ private:
 
 	// 连招窗口定时器（按攻击类型分通道）
 	TMap<ERPGComboType, FTimerHandle> ComboResetTimers;
+
+	// 当前攻击类型 (用于伤害计算)
+	ERPGComboType CurrentComboType = ERPGComboType::LightAttack;
 
 	// 初始化默认连招计数
 	void InitComboCounts();

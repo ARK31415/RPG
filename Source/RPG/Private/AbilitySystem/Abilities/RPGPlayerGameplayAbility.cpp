@@ -45,10 +45,10 @@ FGameplayEffectSpecHandle URPGPlayerGameplayAbility::MakePlayerDamageEffectSpecH
 		ContextHandle
 	);
 
-	/*EffectSpecHandle.Data->SetSetByCallerMagnitude(
+	EffectSpecHandle.Data->SetSetByCallerMagnitude(
 		RPGGameplayTags::Shared_SetByCaller_BaseDamage,
 		InWeaponBaseDamage
-	);*/
+	);
 
 	if(InCurrentAttackTag.IsValid())
 	{

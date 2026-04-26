@@ -13,4 +13,11 @@ UCLASS()
 class RPG_API ARPGPlayerController : public ARPGBaseController
 {
 	GENERATED_BODY()
+public:
+	ARPGPlayerController();
+
+	virtual FGenericTeamId GetGenericTeamId() const override;
+
+private:
+	FGenericTeamId PlayerTeamId;
 };

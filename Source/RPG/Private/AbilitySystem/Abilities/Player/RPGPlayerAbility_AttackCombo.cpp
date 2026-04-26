@@ -7,6 +7,8 @@
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "AbilitySystem/RPGAttributeSet.h"
+#include "GameplayEffect.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRPGPlayerAbility_AttackCombo, All, All)
 
@@ -41,6 +43,28 @@ void URPGPlayerAbility_AttackCombo::ActivateAbility(const FGameplayAbilitySpecHa
 		CombatComp->SwitchComboType(ComboType);
 		CurrentLightAttackComboCount = CombatComp->GetComboCount(ComboType);
 		UE_LOG(LogRPGPlayerAbility_AttackCombo, Log, TEXT("[PlayerAttackCombo] Synced combo count from CombatComponent (type %d): %d"), static_cast<uint8>(ComboType), CurrentLightAttackComboCount);
+	}
+
+	// 设置当前攻击类型 (用于伤害计算)
+	if (UPlayerCombatComponent* CombatComp = GetCombatComponentFromActorInfo())
+	{
+		CombatComp->SetCurrentComboType(ComboType);
+	}
+
+	// 监听 MeleeHit 事件 (Warrior 模式)
+	WaitMeleeHitEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+		this,
+		RPGGameplayTags::Shared_Event_MeleeHit,
+		nullptr,
+		false,
+		true
+	);
+
+	if (WaitMeleeHitEventTask)
+	{
+		WaitMeleeHitEventTask->EventReceived.AddDynamic(this, &URPGPlayerAbility_AttackCombo::HandleApplyDamage);
+		WaitMeleeHitEventTask->ReadyForActivation();
+		UE_LOG(LogRPGPlayerAbility_AttackCombo, Log, TEXT("[PlayerAttackCombo] WaitMeleeHitEventTask activated"));
 	}
 
 	PlayCurrentComboMontage();
@@ -226,4 +250,100 @@ void URPGPlayerAbility_AttackCombo::StartComboWindowTimer()
 		CombatComp->StartComboWindowTimer(ComboType, ComboWindowTime);
 		UE_LOG(LogRPGPlayerAbility_AttackCombo, Log, TEXT("[PlayerAttackCombo] Combo window timer started via CombatComponent (type %d, %.2f seconds)"), static_cast<uint8>(ComboType), ComboWindowTime);
 	}
+}
+
+void URPGPlayerAbility_AttackCombo::HandleApplyDamage(FGameplayEventData EventData)
+{
+	UE_LOG(LogRPGPlayerAbility_AttackCombo, Warning, TEXT("[PlayerAttackCombo] ===== HandleApplyDamage ====="));
+
+	FGameplayEventData LocalEventData = EventData;
+	// 1. 获取目标 (从 EventData)
+	AActor* TargetActor = const_cast<AActor*>(LocalEventData.Target.Get());
+	if (!TargetActor)
+	{
+		UE_LOG(LogRPGPlayerAbility_AttackCombo, Error, TEXT("[PlayerAttackCombo] ERROR: TargetActor is null!"));
+		return;
+	}
+	UE_LOG(LogRPGPlayerAbility_AttackCombo, Log, TEXT("[PlayerAttackCombo] Target: %s"), *TargetActor->GetName());
+
+	// 2. 获取伤害数据 (从 CombatComponent)
+	UPlayerCombatComponent* CombatComp = GetCombatComponentFromActorInfo();
+	if (!CombatComp)
+	{
+		UE_LOG(LogRPGPlayerAbility_AttackCombo, Error, TEXT("[PlayerAttackCombo] ERROR: CombatComponent is null!"));
+		return;
+	}
+
+	// 获取Ability等级
+	UAbilitySystemComponent* OwningASC = GetAbilitySystemComponentFromActorInfo();
+	if (!OwningASC)
+	{
+		UE_LOG(LogRPGPlayerAbility_AttackCombo, Error, TEXT("[PlayerAttackCombo] ERROR: ASC is null!"));
+		return;
+	}
+
+	float AbilityLevel = GetAbilityLevel();
+	float BaseDamage = CombatComp->GetPlayerCurrentEquippedWeaponDamageAtLevel(AbilityLevel);
+	int32 ComboCount = CombatComp->GetComboCount(ComboType);
+
+	UE_LOG(LogRPGPlayerAbility_AttackCombo, Log, TEXT("[PlayerAttackCombo] BaseDamage: %.2f, ComboCount: %d, AbilityLevel: %.0f"),
+		BaseDamage, ComboCount, AbilityLevel);
+
+	// 3. 创建 GE Spec (使用辅助函数)
+	if (!DamageEffectClass)
+	{
+		UE_LOG(LogRPGPlayerAbility_AttackCombo, Error, TEXT("[PlayerAttackCombo] ERROR: DamageEffectClass is not set!"));
+		return;
+	}
+
+	// 确定当前攻击类型的 Tag
+	FGameplayTag AttackTypeTag;
+	if (ComboType == ERPGComboType::LightAttack)
+	{
+		AttackTypeTag = RPGGameplayTags::Player_SetByCaller_AttackType_Light;
+	}
+	else if (ComboType == ERPGComboType::HeavyAttack)
+	{
+		AttackTypeTag = RPGGameplayTags::Player_SetByCaller_AttackType_Heavy;
+	}
+
+	// 使用基类辅助函数创建 Spec
+	FGameplayEffectSpecHandle SpecHandle = MakePlayerDamageEffectSpecHandle(
+		DamageEffectClass,
+		BaseDamage,
+		AttackTypeTag,
+		ComboCount
+	);
+
+	if (!SpecHandle.IsValid())
+	{
+		UE_LOG(LogRPGPlayerAbility_AttackCombo, Error, TEXT("[PlayerAttackCombo] ERROR: Failed to create SpecHandle!"));
+		return;
+	}
+
+	UE_LOG(LogRPGPlayerAbility_AttackCombo, Log, TEXT("[PlayerAttackCombo] Created Damage Spec with BaseDamage: %.2f, ComboCount: %d, AttackType: %s"),
+		BaseDamage, ComboCount, *AttackTypeTag.ToString());
+
+	// 4. 应用 GE 到目标 (使用基类辅助函数)
+	NativeApplyEffectSpecHandleToTarget(TargetActor, SpecHandle);
+	UE_LOG(LogRPGPlayerAbility_AttackCombo, Warning, TEXT("[PlayerAttackCombo] Applied Damage GE to Target: %s"), *TargetActor->GetName());
+
+	// 5. 发送 HitReact 事件给目标 (Warrior 模式)
+	SendHitReactEvent(TargetActor, LocalEventData);
+}
+
+void URPGPlayerAbility_AttackCombo::SendHitReactEvent(AActor* TargetActor, FGameplayEventData EventData)
+{
+	if (!TargetActor)
+	{
+		return;
+	}
+
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+		TargetActor,
+		RPGGameplayTags::Shared_Event_HitReact,
+		EventData
+	);
+
+	UE_LOG(LogRPGPlayerAbility_AttackCombo, Log, TEXT("[PlayerAttackCombo] Sent HitReact event to Target: %s"), *TargetActor->GetName());
 }

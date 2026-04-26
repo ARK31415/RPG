@@ -3,15 +3,20 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GenericTeamAgentInterface.h"
 #include "GameFramework/PlayerController.h"
 #include "RPGBaseController.generated.h"
+
 
 /**
  * 
  */
 UCLASS()
-class RPG_API ARPGBaseController : public APlayerController
+class RPG_API ARPGBaseController : public APlayerController, public IGenericTeamAgentInterface
 {
 	GENERATED_BODY()
+
+public:
+	ARPGBaseController();
 	
 };

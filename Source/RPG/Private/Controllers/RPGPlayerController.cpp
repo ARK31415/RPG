@@ -2,3 +2,13 @@
 
 
 #include "Controllers/RPGPlayerController.h"
+
+ARPGPlayerController::ARPGPlayerController()
+{
+	PlayerTeamId = FGenericTeamId(0);
+}
+
+FGenericTeamId ARPGPlayerController::GetGenericTeamId() const
+{
+	return PlayerTeamId;
+}

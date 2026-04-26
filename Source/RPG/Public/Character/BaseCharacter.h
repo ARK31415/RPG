@@ -5,13 +5,14 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "AbilitySystemInterface.h"
+#include "Interface/PawnCombatInterface.h"
 #include "BaseCharacter.generated.h"
 
 class URPGAttributeSet;
 class UAttributeSet;
 
 UCLASS()
-class RPG_API ABaseCharacter : public ACharacter, public IAbilitySystemInterface
+class RPG_API ABaseCharacter : public ACharacter, public IAbilitySystemInterface, public IPawnCombatInterface
 {
 	GENERATED_BODY()
 
@@ -21,6 +22,9 @@ public:
 
 	// IAbilitySystemInterface implementation
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+
+	virtual UPawnCombatComponent* GetPawnCombatComponent() const override;
+	
 	UAttributeSet* GetAttributeSet() const { return AttributeSet; }
 protected:
 	// Called when the game starts or when spawned

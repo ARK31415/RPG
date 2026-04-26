@@ -415,7 +415,7 @@ void ARPGPlayerCharacter::EquipWeapon(ERPGWeaponType NewWeaponType)
 	// TODO: 在这里添加 GAS 属性更新逻辑
 }
 
-UPlayerCombatComponent* ARPGPlayerCharacter::GetPlayerCombatComponent() const
+UPawnCombatComponent* ARPGPlayerCharacter::GetPawnCombatComponent() const
 {
 	return PlayerCombatComponent;
 }
