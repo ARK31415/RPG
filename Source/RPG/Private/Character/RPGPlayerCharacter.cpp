@@ -39,6 +39,9 @@ ARPGPlayerCharacter::ARPGPlayerCharacter()
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
 
+	// 设置Player Tag
+	Tags.AddUnique(FName("Player"));
+
 	//弹簧臂
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(GetRootComponent());

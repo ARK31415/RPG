@@ -35,10 +35,6 @@ public:
 
 	virtual UPawnCombatComponent* GetPawnCombatComponent() const override;
 	
-	/*/** 获取敌人战斗组件 #1#
-	UFUNCTION(BlueprintPure, Category = "Combat")
-	UEnemyCombatComponent* GetEnemyCombatComponent() const;*/
-	
 	UFUNCTION(BlueprintPure, Category = "RPG|AbilitySystem")
 	URPGAttributeSet* GetRPGAttributeSet() const { return RPGAttributeSet; }
 

@@ -5,7 +5,7 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BehaviorTree/BehaviorTree.h"
 
-DEFINE_LOG_CATEGORY_STATIC(LogEnemyAIController, All, All)
+DEFINE_LOG_CATEGORY_STATIC(LogRPGEnemyAIController, All, All)
 
 ARPGEnemyAIController::ARPGEnemyAIController(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -32,7 +32,7 @@ void ARPGEnemyAIController::RunBehaviorTreeWithBlackboard(UBehaviorTree* InBehav
 {
 	if (!InBehaviorTree)
 	{
-		UE_LOG(LogEnemyAIController, Warning, TEXT("[%s] RunBehaviorTreeWithBlackboard - BehaviorTree 为空"), *GetName());
+		UE_LOG(LogRPGEnemyAIController, Warning, TEXT("[%s] RunBehaviorTreeWithBlackboard - BehaviorTree 为空"), *GetName());
 		return;
 	}
 
@@ -45,7 +45,7 @@ void ARPGEnemyAIController::RunBehaviorTreeWithBlackboard(UBehaviorTree* InBehav
 	// 运行行为树
 	RunBehaviorTree(InBehaviorTree);
 
-	UE_LOG(LogEnemyAIController, Log, TEXT("[%s] RunBehaviorTreeWithBlackboard - 行为树[%s]已启动"),
+	UE_LOG(LogRPGEnemyAIController, Log, TEXT("[%s] RunBehaviorTreeWithBlackboard - 行为树[%s]已启动"),
 		*GetName(), *InBehaviorTree->GetName());
 }
 

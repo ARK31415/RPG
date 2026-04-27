@@ -19,6 +19,9 @@ DEFINE_LOG_CATEGORY_STATIC(LogRPGEnemyCharacter, Log, All)
 
 ARPGEnemyCharacter::ARPGEnemyCharacter()
 {
+	// 设置Enemy Tag
+	Tags.AddUnique(FName("Enemy"));
+	
 	// 敌人自动被AI控制器接管（放置在世界或生成时）
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 
