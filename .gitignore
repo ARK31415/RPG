@@ -1,7 +1,7 @@
 # Visual Studio 2015 user specific files
 .vs/
 .idea/
-.Source/skill
+.qoder/
 
 # Compiled Object files
 *.slo
