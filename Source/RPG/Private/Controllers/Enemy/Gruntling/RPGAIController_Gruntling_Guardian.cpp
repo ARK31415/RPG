@@ -14,7 +14,12 @@ ARPGAIController_Gruntling_Guardian::ARPGAIController_Gruntling_Guardian()
 void ARPGAIController_Gruntling_Guardian::BeginPlay()
 {
 	Super::BeginPlay();
-	
+}
+
+// AI控制器接管Pawn时调用（在行为树启动后）
+void ARPGAIController_Gruntling_Guardian::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
 }
 
 // Called every frame

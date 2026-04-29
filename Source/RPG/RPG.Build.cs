@@ -38,6 +38,7 @@ public class RPG : ModuleRules
 				
 				// AI 行为树、导航系统。
 				"AIModule",
+				"NavigationSystem",
 				
 				// 数据驱动注册表（动态加载配置数据）。
 				"ModularGameplay",

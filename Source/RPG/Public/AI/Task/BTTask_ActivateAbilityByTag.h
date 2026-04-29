@@ -16,8 +16,7 @@ class RPG_API UBTTask_ActivateAbilityByTag : public UBTTask_BlueprintBase
 
 protected:
 	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
-
-private:
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
 	FGameplayTag AbilityTag;
 };
