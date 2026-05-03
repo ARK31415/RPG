@@ -67,11 +67,35 @@ ARPGPlayerCharacter::ARPGPlayerCharacter()
 
 UAbilitySystemComponent* ARPGPlayerCharacter::GetAbilitySystemComponent() const
 {
-	if (ARPGPlayerState* PS = GetPlayerState<ARPGPlayerState>())
+	// 🔹 步骤1：检查 PlayerState 是否存在（网络同步关键）
+	// .qoder 文档参考："GAS体系详解.md" - "代理必须在委托前验证权威性"
+	APlayerState* PS = GetPlayerState<APlayerState>();
+	if (!PS)
 	{
-		return PS->GetAbilitySystemComponent();
+		UE_LOG(LogRPGPlayerCharacter, Warning, TEXT("❌ RPGPlayerCharacter::GetAbilitySystemComponent(): PlayerState 为空，无法委托给权威对象"));
+		return nullptr;
 	}
-	return nullptr;
+
+	// 🔹 步骤2：检查 PlayerState 是否实现了 IAbilitySystemInterface（Lyra 规范要求）
+	// .qoder 文档参考："网络同步基础.md" - "权威对象必须实现 IAbilitySystemInterface 以支持委托"
+	IAbilitySystemInterface* AbilityInterface = Cast<IAbilitySystemInterface>(PS);
+	if (!AbilityInterface)
+	{
+		UE_LOG(LogRPGPlayerCharacter, Warning, TEXT("❌ RPGPlayerCharacter::GetAbilitySystemComponent(): PlayerState 未实现 IAbilitySystemInterface 接口"));
+		return nullptr;
+	}
+
+	// 🔹 步骤3：获取 ASC 并验证其有效性（关键安全检查）
+	// .qoder 文档参考："智能指针详解.md" - "所有 TObjectPtr 访问必须由 IsValid() 守护"
+	// 注意：IsInitialized() 在 UE5.4+ 中已弃用，改用 ASC->GetOwner() != nullptr
+	UAbilitySystemComponent* ASC = AbilityInterface->GetAbilitySystemComponent();
+	if (!ASC || !ASC->IsValidLowLevelFast() || !ASC->GetOwner())
+	{
+		UE_LOG(LogRPGPlayerCharacter, Warning, TEXT("❌ RPGPlayerCharacter::GetAbilitySystemComponent(): ASC 无效或 ASC->GetOwner() 为空"));
+		return nullptr;
+	}
+
+	return ASC;
 }
 
 void ARPGPlayerCharacter::PossessedBy(AController* NewController)

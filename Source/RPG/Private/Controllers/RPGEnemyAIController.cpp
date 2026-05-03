@@ -6,6 +6,7 @@
 #include "BehaviorTree/BehaviorTree.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
+#include "Perception/AISense_Sight.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRPGEnemyAIController, All, All)
 
@@ -33,13 +34,37 @@ ARPGEnemyAIController::ARPGEnemyAIController(const FObjectInitializer& ObjectIni
 	InitializePerception();
 
 	SetGenericTeamId(FGenericTeamId(1));
+	UE_LOG(LogRPGEnemyAIController, Warning, TEXT("Enemies GenericTeamId: %d"), GetGenericTeamId().GetId());
+}
+
+ETeamAttitude::Type ARPGEnemyAIController::GetTeamAttitudeTowards(const AActor& Other) const
+{
+	const APawn* PawnToCheck = Cast<const APawn>(&Other);
+
+	const IGenericTeamAgentInterface* OtherTeamAgent = Cast<const IGenericTeamAgentInterface>(PawnToCheck->GetController());
+
+	if(OtherTeamAgent && OtherTeamAgent->GetGenericTeamId() < GetGenericTeamId())
+	{
+		UE_LOG(LogRPGEnemyAIController, Warning, TEXT("[%s] GetTeamAttitudeTowards OtherTeamAgentTeamId %d - Hostile team detected"), *GetName(), OtherTeamAgent->GetGenericTeamId().GetId())
+		return ETeamAttitude::Hostile;
+	}
+	
+	UE_LOG(LogRPGEnemyAIController, Warning, TEXT("[%s] GetTeamAttitudeTowards OtherTeamAgentTeamId %d - Friendly team detected"), *GetName(), OtherTeamAgent->GetGenericTeamId().GetId())
+
+	return ETeamAttitude::Friendly;
 }
 
 void ARPGEnemyAIController::BeginPlay()
 {
 	Super::BeginPlay();
-}
 
+	// 🔹 步骤1：启用 Sight Sense（.qoder reference: "网络同步基础.md"）
+	if (EnemyPerceptionComponent)
+	{
+		EnemyPerceptionComponent->SetSenseEnabled(UAISense_Sight::StaticClass(), true);
+	}
+	
+}
 void ARPGEnemyAIController::RunBehaviorTreeWithBlackboard(UBehaviorTree* InBehaviorTree)
 {
 	if (!InBehaviorTree)
@@ -70,7 +95,7 @@ void ARPGEnemyAIController::InitializePerception()
 	EnemySightConfig->LoseSightRadius = LoseSightRadius;
 	EnemySightConfig->PeripheralVisionAngleDegrees = PeripheralVisionAngle;
 	EnemySightConfig->SetMaxAge(PerceptionMaxAge);
-	EnemySightConfig->DetectionByAffiliation.bDetectEnemies = bDetectEnemies;
+	EnemySightConfig->DetectionByAffiliation.bDetectEnemies = true;
 	EnemySightConfig->DetectionByAffiliation.bDetectFriendlies = false;
 	EnemySightConfig->DetectionByAffiliation.bDetectNeutrals = false;
 
@@ -78,7 +103,7 @@ void ARPGEnemyAIController::InitializePerception()
 	EnemyPerceptionComponent = CreateDefaultSubobject<UAIPerceptionComponent>(TEXT("EnemyPerceptionComponent"));
 	EnemyPerceptionComponent->ConfigureSense(*EnemySightConfig);
 	EnemyPerceptionComponent->SetDominantSense(EnemySightConfig->GetSenseImplementation());
-	EnemyPerceptionComponent->OnTargetPerceptionUpdated.AddDynamic(this, &ARPGEnemyAIController::OnTargetPerceptionUpdated);
+	EnemyPerceptionComponent->OnTargetPerceptionUpdated.AddUniqueDynamic(this, &ThisClass::OnEnemyPerceptionUpdated);
 }
 
 // 感知更新回调
@@ -110,6 +135,21 @@ void ARPGEnemyAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus
 
 	// 更新最近目标到Blackboard
 	UpdateNearestTarget();
+}
+
+void ARPGEnemyAIController::OnEnemyPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)
+{
+	UE_LOG(LogRPGEnemyAIController, Log, TEXT("[%s] OnEnemyPerceptionUpdated - Actor: %s"), *GetName(), *Actor->GetName());
+	if(UBlackboardComponent* BlackboardComponent = GetBlackboardComponent())
+	{
+		if(!BlackboardComponent->GetValueAsObject(FName("TargetActor")))
+		{
+			if(Stimulus.WasSuccessfullySensed() && Actor)
+			{
+				BlackboardComponent->SetValueAsObject(FName("TargetActor"), Actor);
+			}
+		}
+	}
 }
 
 // 更新最近目标到Blackboard

@@ -5,13 +5,13 @@
 #include "CoreMinimal.h"
 #include "AIController.h"
 #include "Perception/AIPerceptionTypes.h"
+#include "Perception/AIPerceptionComponent.h"
+#include "Perception/AISenseConfig_Sight.h"
 #include "RPGEnemyAIController.generated.h"
 
 class UBehaviorTreeComponent;
 class UBlackboardComponent;
 class UBehaviorTree;
-class UAIPerceptionComponent;
-class UAISenseConfig_Sight;
 
 /**
  * 敌人AI控制器
@@ -26,6 +26,8 @@ class RPG_API ARPGEnemyAIController : public AAIController
 public:
 	ARPGEnemyAIController(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
+	virtual ETeamAttitude::Type GetTeamAttitudeTowards(const AActor& Other) const override;
+	
 	/** 运行指定的行为树（由敌人Character在PossessedBy中调用） */
 	void RunBehaviorTreeWithBlackboard(UBehaviorTree* InBehaviorTree);
 
@@ -57,8 +59,7 @@ protected:
 	/** 是否检测敌人（玩家） */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "AI|Perception")
 	bool bDetectEnemies;
-
-private:
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UBehaviorTreeComponent> BehaviorTreeComponent;
 
@@ -80,11 +81,25 @@ private:
 	void InitializePerception();
 
 	// 感知更新回调
+	UFUNCTION()
 	void OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus);
+
+	UFUNCTION()
+	virtual void OnEnemyPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus);
 
 	// 更新最近目标到Blackboard
 	void UpdateNearestTarget();
 
 	// 虚函数：允许子类自定义感知后的行为
 	virtual void OnPerceptionTargetDetected(AActor* Actor, FAIStimulus Stimulus);
+
+	// Getter方法
+	UFUNCTION(BlueprintPure, Category = "AI|Perception")
+	UAIPerceptionComponent* GetEnemyPerceptionComponent() const { return EnemyPerceptionComponent; }
+
+	UFUNCTION(BlueprintPure, Category = "AI|Perception")
+	UAISenseConfig_Sight* GetEnemySightConfig() const { return EnemySightConfig; }
+	
+	FGenericTeamId EnemyTeamId;
+	FGenericTeamId GetEnemyTeamId() const { return EnemyTeamId; }
 };
