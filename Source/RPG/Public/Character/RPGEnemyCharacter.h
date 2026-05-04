@@ -13,6 +13,8 @@ class UDataAsset_EnemyStartUpData;
 class UDataAsset_EnemyConfig;
 class UBehaviorTree;
 class ARPGEnemyAIController;
+class URPGEnemyUIComponent;
+class URPGHealthComponent;
 
 /**
  * Enemy Character Base Class - 用于敌人的ASC和属性管理
@@ -29,11 +31,18 @@ public:
 	// IAbilitySystemInterface implementation
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
+	// IPawnUIInterface implementation
+	virtual URPGEnemyUIComponent* GetEnemyUIComponent() override { return EnemyUIComponent; }
+
 	// Getter functions for ASC and AttributeSet
 	UFUNCTION(BlueprintPure, Category = "RPG|AbilitySystem")
 	URPGAbilitySystemComponent* GetRPGAbilitySystemComponent() const { return RPGAbilitySystemComponent; }
 
 	virtual UPawnCombatComponent* GetPawnCombatComponent() const override;
+	
+	/** 获取敌人 UI 组件 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="UI")
+	TObjectPtr<URPGEnemyUIComponent> EnemyUIComponent;
 	
 	UFUNCTION(BlueprintPure, Category = "RPG|AbilitySystem")
 	URPGAttributeSet* GetRPGAttributeSet() const { return RPGAttributeSet; }

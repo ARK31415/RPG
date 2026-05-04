@@ -14,6 +14,8 @@
 #include "Components/CapsuleComponent.h"
 #include "Animation/AnimInstance.h"
 #include "RPGGameplayTags.h"
+#include "Component/Health/RPGEnemyHealthComponent.h"
+#include "Component/UI/RPGEnemyUIComponent.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRPGEnemyCharacter, Log, All)
 
@@ -46,6 +48,12 @@ ARPGEnemyCharacter::ARPGEnemyCharacter()
 
 	// Create attribute set
 	RPGAttributeSet = CreateDefaultSubobject<URPGAttributeSet>(TEXT("RPGAttributeSet"));
+
+	// 创建敌人健康组件（派生类）
+	HealthComponent = CreateDefaultSubobject<URPGEnemyHealthComponent>(TEXT("HealthComponent"));
+
+	// 创建敌人 UI 组件
+	EnemyUIComponent = CreateDefaultSubobject<URPGEnemyUIComponent>(TEXT("EnemyUIComponent"));
 }
 
 UAbilitySystemComponent* ARPGEnemyCharacter::GetAbilitySystemComponent() const

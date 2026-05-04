@@ -5,6 +5,8 @@
 
 #include "CoreMinimal.h"
 #include "CommonActivatableWidget.h"
+#include "Interface/PawnUIInterface.h"
+#include "Component/UI/RPGPlayerUIComponent.h"
 #include "RPGHUDWidget.generated.h"
 /**
  * HUD Widget，显示玩家状态信息
@@ -26,6 +28,17 @@ public:
 
 	// 停用Widget
 	virtual void NativeOnDeactivated() override;
+
+	/** 当 PlayerUIComponent 初始化完成时调用（蓝图实现） */
+	UFUNCTION(BlueprintImplementableEvent, Category="UI")
+	void BP_OnPlayerUIComponentInitialized(URPGPlayerUIComponent* NewPlayerUIComponent);
+
+	/** 动态委托回调函数（必须是 UFUNCTION） */
+	UFUNCTION()
+	void OnHealthChangedDynamic(float NewHealth, float OldHealth);
+
+	UFUNCTION()
+	void OnManaChangedDynamic(float NewMana, float OldMana);
 
 	// 更新生命值显示
 	void UpdateHealth(float CurrentHealth, float MaxHealth);
@@ -58,7 +71,6 @@ protected:
 	class UImage* WeaponIcon;
 
 private:
-	// 绑定到PlayerState的Delegate
-	FDelegateHandle HealthChangedDelegateHandle;
-	FDelegateHandle ManaChangedDelegateHandle;
+	/** Player UI 组件引用 */
+	TWeakObjectPtr<URPGPlayerUIComponent> PlayerUIComponent;
 };

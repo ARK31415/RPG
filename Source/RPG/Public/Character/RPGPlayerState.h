@@ -5,11 +5,11 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
 #include "AbilitySystemInterface.h"
+#include "AbilitySystem/RPGAttributeSet.h"
 #include "RPGPlayerState.generated.h"
 
 class UAttributeSet;
 class URPGAbilitySystemComponent;
-class URPGAttributeSet;
 class UDataAsset_PlayerStartUpData;
 
 /**

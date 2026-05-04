@@ -30,7 +30,19 @@ bool URPGHUDWidget::Initialize()
 		return false;
 	}
 
-	// 绑定Widget组件
+	// 通过 Interface 获取 PlayerUIComponent
+	if (IPawnUIInterface* UIInterface = Cast<IPawnUIInterface>(GetOwningPlayerPawn()))
+	{
+		URPGPlayerUIComponent* UIComp = UIInterface->GetPlayerUIComponent();
+		if (UIComp)
+		{
+			PlayerUIComponent = UIComp;
+			BP_OnPlayerUIComponentInitialized(UIComp);
+			UE_LOG(LogRPGHUDWidget, Log, TEXT("HUD Widget: PlayerUIComponent acquired"));
+		}
+	}
+
+	// 绑定 Widget 组件
 	if (HealthBar)
 	{
 		HealthBar->SetPercent(1.0f);
@@ -58,72 +70,50 @@ void URPGHUDWidget::NativeOnActivated()
 {
 	Super::NativeOnActivated();
 
-	// 获取PlayerState并绑定属性变化
-	APlayerController* PC = GetOwningPlayer<APlayerController>();
-	if (PC && PC->GetPlayerState<ARPGPlayerState>())
+	if (!PlayerUIComponent.IsValid())
 	{
-		ARPGPlayerState* PS = Cast<ARPGPlayerState>(PC->GetPlayerState<ARPGPlayerState>());
-		if (PS && PS->GetRPGAttributeSet())
-		{
-			URPGAttributeSet* AttributeSet = PS->GetRPGAttributeSet();
-
-			// 绑定生命值变化
-			HealthChangedDelegateHandle = AttributeSet->OnHealthChanged.AddUObject(this, &URPGHUDWidget::UpdateHealth);
-
-			// 绑定法力值变化
-			ManaChangedDelegateHandle = AttributeSet->OnManaChanged.AddUObject(this, &URPGHUDWidget::UpdateMana);
-
-			// 初始化显示
-			UpdateHealth(AttributeSet->GetCurrentHealth(), AttributeSet->GetMaxHealth());
-			UpdateMana(AttributeSet->GetCurrentMana(), AttributeSet->GetMaxMana());
-		}
+		UE_LOG(LogRPGHUDWidget, Warning, TEXT("HUD Widget: PlayerUIComponent is null"));
+		return;
 	}
+
+	// 订阅 PlayerUIComponent 的事件（使用 AddUniqueDynamic）
+	PlayerUIComponent->OnHealthChangedForUI.AddUniqueDynamic(
+		this, &URPGHUDWidget::OnHealthChangedDynamic);
+
+	PlayerUIComponent->OnManaChangedForUI.AddUniqueDynamic(
+		this, &URPGHUDWidget::OnManaChangedDynamic);
+
+	// 初始化显示
+	UpdateHealth(PlayerUIComponent->GetCurrentHealth(), PlayerUIComponent->GetMaxHealth());
+	UpdateMana(100.0f, 100.0f); // TODO: 从 UIComponent 获取 Mana
 }
 
 void URPGHUDWidget::NativeOnDeactivated()
 {
 	Super::NativeOnDeactivated();
 
-	// 清理Delegate绑定
-	if (HealthChangedDelegateHandle.IsValid())
+	// 移除动态委托绑定
+	if (PlayerUIComponent.IsValid())
 	{
-		URPGAttributeSet* AttributeSet = nullptr;
-		APlayerController* PC = GetOwningPlayer<APlayerController>();
-		if (PC && PC->GetPlayerState<ARPGPlayerState>())
-		{
-			ARPGPlayerState* PS = Cast<ARPGPlayerState>(PC->GetPlayerState<ARPGPlayerState>());
-			if (PS && PS->GetRPGAttributeSet())
-			{
-				AttributeSet = PS->GetRPGAttributeSet();
-			}
-		}
+		PlayerUIComponent->OnHealthChangedForUI.RemoveDynamic(
+			this, &URPGHUDWidget::OnHealthChangedDynamic);
 
-		if (AttributeSet)
-		{
-			AttributeSet->OnHealthChanged.Remove(HealthChangedDelegateHandle);
-		}
-		HealthChangedDelegateHandle.Reset();
+		PlayerUIComponent->OnManaChangedForUI.RemoveDynamic(
+			this, &URPGHUDWidget::OnManaChangedDynamic);
 	}
+}
 
-	if (ManaChangedDelegateHandle.IsValid())
+void URPGHUDWidget::OnHealthChangedDynamic(float NewHealth, float OldHealth)
+{
+	if (PlayerUIComponent.IsValid())
 	{
-		URPGAttributeSet* AttributeSet = nullptr;
-		APlayerController* PC = GetOwningPlayer<APlayerController>();
-		if (PC && PC->GetPlayerState<ARPGPlayerState>())
-		{
-			ARPGPlayerState* PS = Cast<ARPGPlayerState>(PC->GetPlayerState<ARPGPlayerState>());
-			if (PS && PS->GetRPGAttributeSet())
-			{
-				AttributeSet = PS->GetRPGAttributeSet();
-			}
-		}
-
-		if (AttributeSet)
-		{
-			AttributeSet->OnManaChanged.Remove(ManaChangedDelegateHandle);
-		}
-		ManaChangedDelegateHandle.Reset();
+		UpdateHealth(NewHealth, PlayerUIComponent->GetMaxHealth());
 	}
+}
+
+void URPGHUDWidget::OnManaChangedDynamic(float NewMana, float OldMana)
+{
+	UpdateMana(NewMana, 100.0f); // TODO: 从 UIComponent 获取 MaxMana
 }
 
 void URPGHUDWidget::UpdateHealth(float CurrentHealth, float MaxHealth)

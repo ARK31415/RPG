@@ -17,6 +17,8 @@ class URPGCharacterAnimInstance;
 class UPlayerCombatComponent;
 class URPGAbilitySystemComponent;
 class URPGAttributeSet;
+class URPGPlayerUIComponent;
+class URPGHealthComponent;
 /**
  * 
  */
@@ -30,6 +32,9 @@ public:
 
 	// IAbilitySystemInterface - 从 PlayerState 获取 ASC
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+
+	// IPawnUIInterface implementation
+	virtual URPGPlayerUIComponent* GetPlayerUIComponent() override { return PlayerUIComponent; }
 
 	// 显示主菜单
 	UFUNCTION(BlueprintCallable, Category = "UI")
@@ -76,6 +81,11 @@ public:
 	UPlayerCombatComponent* GetPlayerCombatComponent() const;*/
 
 	virtual UPawnCombatComponent* GetPawnCombatComponent() const override;
+
+public:
+	/** 获取玩家 UI 组件 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="UI")
+	TObjectPtr<URPGPlayerUIComponent> PlayerUIComponent;
 
 private:
 	// ========== 跳跃系统（土狼时间） ==========

@@ -26,6 +26,8 @@
 #include "AbilitySystem/RPGAbilitySystemComponent.h"
 #include "DataAsset/Character/DataAsset_CharacterConfig.h"
 #include "AbilitySystem/RPGAttributeSet.h"
+#include "Component/Health/RPGPlayerHealthComponent.h"
+#include "Component/UI/RPGPlayerUIComponent.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRPGPlayerCharacter, All, All)
 
@@ -68,6 +70,12 @@ ARPGPlayerCharacter::ARPGPlayerCharacter()
 
 	// 创建战斗组件
 	PlayerCombatComponent = CreateDefaultSubobject<UPlayerCombatComponent>(TEXT("PlayerCombatComponent"));
+
+	// 创建玩家健康组件（派生类）
+	HealthComponent = CreateDefaultSubobject<URPGPlayerHealthComponent>(TEXT("HealthComponent"));
+
+	// 创建玩家 UI 组件
+	PlayerUIComponent = CreateDefaultSubobject<URPGPlayerUIComponent>(TEXT("PlayerUIComponent"));
 }
 
 UAbilitySystemComponent* ARPGPlayerCharacter::GetAbilitySystemComponent() const
