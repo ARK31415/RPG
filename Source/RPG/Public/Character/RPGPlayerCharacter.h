@@ -31,6 +31,10 @@ public:
 	// IAbilitySystemInterface - 从 PlayerState 获取 ASC
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
+	// 显示主菜单
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void ShowMainMenu();
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;

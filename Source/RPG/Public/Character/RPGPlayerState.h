@@ -32,7 +32,7 @@ public:
 	URPGAbilitySystemComponent* GetRPGAbilitySystemComponent() const { return RPGAbilitySystemComponent; }
 
 	UFUNCTION(BlueprintPure, Category = "RPG|AbilitySystem")
-	UAttributeSet* GetRPGAttributeSet() const { return AttributeSet; }
+	URPGAttributeSet* GetRPGAttributeSet() const { return Cast<URPGAttributeSet>(AttributeSet); }
 
 protected:
 	virtual void BeginPlay() override;

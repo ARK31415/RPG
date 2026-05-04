@@ -129,6 +129,13 @@ void URPGAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute, 
 		{
 			SetCurrentHealth(NewValue);
 		}
+		// 触发UI更新委托
+		OnHealthChanged.Broadcast(GetCurrentHealth(), GetMaxHealth());
+	}
+	else if (Attribute == GetCurrentHealthAttribute())
+	{
+		// 触发UI更新委托
+		OnHealthChanged.Broadcast(GetCurrentHealth(), GetMaxHealth());
 	}
 	else if (Attribute == GetMaxRageAttribute())
 	{
@@ -143,6 +150,13 @@ void URPGAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute, 
 		{
 			SetCurrentMana(NewValue);
 		}
+		// 触发UI更新委托
+		OnManaChanged.Broadcast(GetCurrentMana(), GetMaxMana());
+	}
+	else if (Attribute == GetCurrentManaAttribute())
+	{
+		// 触发UI更新委托
+		OnManaChanged.Broadcast(GetCurrentMana(), GetMaxMana());
 	}
 
 	// 注意：这里可以添加属性变更后的其他逻辑

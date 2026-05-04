@@ -7,7 +7,7 @@ public class RPG : ModuleRules
 	public RPG(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
-	
+
 		PublicDependencyModuleNames.AddRange(
 			new string[] {
 				
@@ -63,7 +63,7 @@ public class RPG : ModuleRules
 				// 粒子特效系统。
 				"Niagara",
 				
-
+				"UMG",
 				
 				// 复杂逻辑流程控制（如技能链、剧情分支）。
 				"ControlFlows",
@@ -71,12 +71,21 @@ public class RPG : ModuleRules
 				// 提供动态访问和修改对象属性
 				"PropertyPath",
 				
-				"CommonGame"
+				"CommonGame",
+				"CommonUI"
 				
 			}
-		);
+			);
 
-		PrivateDependencyModuleNames.AddRange(
+			PublicIncludePaths.AddRange(
+				new string[] {
+					"Public/AbilitySystem",
+					"Public/UI",
+					"Public/Character"
+				}
+			);
+
+			PrivateDependencyModuleNames.AddRange(
 			new string[] {
 				
 				// 输入设备支持。
@@ -110,10 +119,7 @@ public class RPG : ModuleRules
 				// 游戏内UI（用户界面控件）。
 				"UMG",
 				
-				// 通用UI组件（如菜单、HUD）。
-				"CommonUI",
-				
-				// 跨平台输入统一管理。
+				// 跨平台输入统一管理（若仍需）。
 				"CommonInput",
 				
 				// 高级音频混合与控制。
@@ -124,20 +130,22 @@ public class RPG : ModuleRules
 
 				// 客户端自动化行为控制
 				"ClientPilot",
-				
+
 				// 音频动态调节（根据游戏状态改变音效）。
 				"AudioModulation",
-				
+
 				// 引擎设置
 				"EngineSettings",
-				
+
 				// 加密网络通信支持（安全传输层）。
 				"DTLSHandlerComponent",
-				
+
 				// JSON 数据解析与序列化。
-				"Json",
-			}
-		);
+				"Json", 
+				}
+			);
+
+		
 
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });

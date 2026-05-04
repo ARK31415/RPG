@@ -4,6 +4,11 @@
 #include "Character/RPGPlayerCharacter.h"
 
 #include "EnhancedInputComponent.h"
+#include "GameModes/RPGGameModeBase.h"
+#include "UI/Subsystem/RPGUIManagerSubsystem.h"
+#include "Engine/GameInstance.h"
+#include "UI/Widget/RPGHUDWidget.h"
+#include "UI/Widget//RPGMainMenuWidget.h"
 
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
@@ -31,8 +36,8 @@ ARPGPlayerCharacter::ARPGPlayerCharacter()
 	, MaxTurnSpeed(720.f)
 	, SpeedTurnMultiplier(1.0f)
 	, AngleTurnMultiplier(0.5f)
-	, CurrentWeaponType(ERPGWeaponType::None)
 	, bHasMovementInput(false)
+	, CurrentWeaponType(ERPGWeaponType::None)
 	, bShowRotationDebug(false)
 {
 	bUseControllerRotationPitch = false;
@@ -571,5 +576,21 @@ void ARPGPlayerCharacter::OnDebugTimerTick()
 			AS->GetCurrentRage(), AS->GetMaxRage(),
 			AS->GetCurrentMana(), AS->GetMaxMana(),
 			AS->GetAttackPower(), AS->GetDefensePower());
+	}
+}
+
+void ARPGPlayerCharacter::ShowMainMenu()
+{
+	// 通过 GameInstance 获取 UI 管理器 Subsystem
+	UGameInstance* GI = GetGameInstance();
+	URPGUIManagerSubsystem* UIManager = GI ? GI->GetSubsystem<URPGUIManagerSubsystem>() : nullptr;
+	if (UIManager)
+	{
+		UIManager->ShowMainMenu(GetController<APlayerController>());
+		UE_LOG(LogRPGPlayerCharacter, Log, TEXT("ARPGPlayerCharacter::ShowMainMenu - Main menu displayed"));
+	}
+	else
+	{
+		UE_LOG(LogRPGPlayerCharacter, Warning, TEXT("ARPGPlayerCharacter::ShowMainMenu - UI Manager Subsystem is null"));
 	}
 }
