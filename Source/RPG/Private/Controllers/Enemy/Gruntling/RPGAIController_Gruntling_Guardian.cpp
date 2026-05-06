@@ -20,7 +20,7 @@ void ARPGAIController_Gruntling_Guardian::BeginPlay()
 	// Guardian 特有的感知参数配置
 	SightRadius = 2000.f;
 	LoseSightRadius = 2500.f;
-	PeripheralVisionAngle = 120.f;
+	PeripheralVisionAngle = 180.f;
 	PerceptionMaxAge = 3.f;
 	bDetectEnemies = true;
 

@@ -2,13 +2,14 @@
 
 
 #include "Character/BaseCharacter.h"
-
+#include "MotionWarpingComponent.h"
 // Sets default values
 ABaseCharacter::ABaseCharacter()
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	//tick不能关，否则Player左右移动会有问题
 	PrimaryActorTick.bCanEverTick = true;
-
+	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
 }
 
 UAbilitySystemComponent* ABaseCharacter::GetAbilitySystemComponent() const

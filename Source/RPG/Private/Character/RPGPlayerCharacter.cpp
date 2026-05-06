@@ -3,13 +3,8 @@
 
 #include "Character/RPGPlayerCharacter.h"
 
-#include "EnhancedInputComponent.h"
-#include "GameModes/RPGGameModeBase.h"
 #include "UI/Subsystem/RPGUIManagerSubsystem.h"
 #include "Engine/GameInstance.h"
-#include "UI/Widget/RPGHUDWidget.h"
-#include "UI/Widget//RPGMainMenuWidget.h"
-
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
 #include "RPGGameplayTags.h"
@@ -566,24 +561,24 @@ void ARPGPlayerCharacter::OnCoyoteTimeExpired()
 
 void ARPGPlayerCharacter::OnDebugTimerTick()
 {
-	UE_LOG(LogRPGPlayerCharacter, Log, 
+	/*UE_LOG(LogRPGPlayerCharacter, Log, 
 		TEXT("[%s] Debug Timer Tick - Location: %s, LightCombo: %d, HeavyCombo: %d"),
 		*GetName(),
 		*GetActorLocation().ToString(),
 		PlayerCombatComponent ? PlayerCombatComponent->GetComboCount(ERPGComboType::LightAttack) : -1,
-		PlayerCombatComponent ? PlayerCombatComponent->GetComboCount(ERPGComboType::HeavyAttack) : -1);
+		PlayerCombatComponent ? PlayerCombatComponent->GetComboCount(ERPGComboType::HeavyAttack) : -1);*/
 
 	// 输出当前属性值用于验证初始化
 	if (const URPGAttributeSet* AS = Cast<URPGAttributeSet>(AttributeSet))
 	{
-		UE_LOG(LogRPGPlayerCharacter, Log,
+		/*UE_LOG(LogRPGPlayerCharacter, Log,
 			TEXT("[%s] Attributes - Str=%.1f Int=%.1f Vit=%.1f Agi=%.1f | HP=%.1f/%.1f Rage=%.1f/%.1f Mana=%.1f/%.1f | ATK=%.1f DEF=%.1f"),
 			*GetName(),
 			AS->GetStrength(), AS->GetIntelligence(), AS->GetVitality(), AS->GetAgility(),
 			AS->GetCurrentHealth(), AS->GetMaxHealth(),
 			AS->GetCurrentRage(), AS->GetMaxRage(),
 			AS->GetCurrentMana(), AS->GetMaxMana(),
-			AS->GetAttackPower(), AS->GetDefensePower());
+			AS->GetAttackPower(), AS->GetDefensePower());*/
 	}
 }
 

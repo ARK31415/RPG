@@ -14,6 +14,7 @@ class UAttributeSet;
 class URPGHealthComponent;
 class URPGPlayerUIComponent;
 class URPGEnemyUIComponent;
+class UMotionWarpingComponent;
 
 UCLASS()
 class RPG_API ABaseCharacter : public ACharacter, public IAbilitySystemInterface, public IPawnCombatInterface, public IPawnUIInterface
@@ -38,6 +39,10 @@ public:
 	/** 获取健康组件 */
 	UFUNCTION(BlueprintPure, Category="Health")
 	URPGHealthComponent* GetHealthComponent() const { return HealthComponent; }
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "MotionWarping")
+	UMotionWarpingComponent* MotionWarpingComponent;
+	
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

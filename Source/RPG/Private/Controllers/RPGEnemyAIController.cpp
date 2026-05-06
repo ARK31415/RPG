@@ -34,7 +34,7 @@ ARPGEnemyAIController::ARPGEnemyAIController(const FObjectInitializer& ObjectIni
 	InitializePerception();
 
 	SetGenericTeamId(FGenericTeamId(1));
-	UE_LOG(LogRPGEnemyAIController, Warning, TEXT("Enemies GenericTeamId: %d"), GetGenericTeamId().GetId());
+	//UE_LOG(LogRPGEnemyAIController, Warning, TEXT("Enemies GenericTeamId: %d"), GetGenericTeamId().GetId());
 }
 
 ETeamAttitude::Type ARPGEnemyAIController::GetTeamAttitudeTowards(const AActor& Other) const

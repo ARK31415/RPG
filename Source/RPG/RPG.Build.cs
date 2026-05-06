@@ -72,7 +72,8 @@ public class RPG : ModuleRules
 				"PropertyPath",
 				
 				"CommonGame",
-				"CommonUI"
+				"CommonUI",
+				"MotionWarping",
 				
 			}
 			);
