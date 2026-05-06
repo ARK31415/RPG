@@ -75,8 +75,8 @@ namespace RPGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(Shared_Status_HitReact_Right, "Shared.Status.HitReact.Right");
 
 	//UI Layer Tags
-	UE_DEFINE_GAMEPLAY_TAG(UI_Layer_Game, "UI.Layer.Game");
-	UE_DEFINE_GAMEPLAY_TAG(UI_Layer_GameMenu, "UI.Layer.GameMenu");
-	UE_DEFINE_GAMEPLAY_TAG(UI_Layer_Menu, "UI.Layer.Menu");
-	UE_DEFINE_GAMEPLAY_TAG(UI_Layer_Modal, "UI.Layer.Modal");
+	UE_DEFINE_GAMEPLAY_TAG(RPGCommonUI_WidgetStack_Modal, "RPGCommonUI.WidgetStack.Modal");
+	UE_DEFINE_GAMEPLAY_TAG(RPGCommonUI_WidgetStack_GameMenu, "RPGCommonUI.WidgetStack.GameMenu");
+	UE_DEFINE_GAMEPLAY_TAG(RPGCommonUI_WidgetStack_GameHUD, "RPGCommonUI.WidgetStack.GameHUD");
+	UE_DEFINE_GAMEPLAY_TAG(RPGCommonUI_WidgetStack_Frontend, "RPGCommonUI.WidgetStack.Frontend");
 }

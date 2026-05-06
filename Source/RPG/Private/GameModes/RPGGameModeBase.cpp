@@ -8,4 +8,6 @@ ARPGGameModeBase::ARPGGameModeBase()
 {
 	// Set default player state class for RPG game mode
 	PlayerStateClass = ARPGPlayerState::StaticClass();
+	// Note: UI is managed through UPrimaryGameLayout widget via CommonGame plugin's GameUIPolicy
+	// No need to set DefaultHUDClass in this architecture
 }

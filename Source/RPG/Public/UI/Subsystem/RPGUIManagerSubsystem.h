@@ -3,12 +3,21 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "GameUIManagerSubsystem.h"
 #include "Containers/Ticker.h"
 #include "RPGUIManagerSubsystem.generated.h"
 
+class URPGWidget_ActivatableBase;
+class UWidgetLayout_Base;
 class APlayerController;
 class UPrimaryGameLayout;
+
+enum class EAsyncPushWidgetState : uint8
+{
+	OnCreatedBeforePush,
+	AfterPush
+};
 
 /**
  * RPG 项目的 UI 管理器 Subsystem。
@@ -21,19 +30,24 @@ class RPG_API URPGUIManagerSubsystem : public UGameUIManagerSubsystem
 	GENERATED_BODY()
 
 public:
-	/** 获取当前 LocalPlayer 对应的 PrimaryGameLayout */
-	UFUNCTION(BlueprintCallable, Category = "UI")
-	UPrimaryGameLayout* GetPrimaryGameLayout(APlayerController* Controller) const;
+	static URPGUIManagerSubsystem* Get(UObject* WorldContextObject);
 
-	/** 在 Menu 层显示主菜单 */
-	UFUNCTION(BlueprintCallable, Category = "UI")
-	void ShowMainMenu(APlayerController* Controller);
+	// begin USubsystem Interface
+	virtual bool ShouldCreateSubsystem(UObject* Outer) const override;
+	// end USubsystem Interface
 
-	/** 在 Game 层显示 HUD */
 	UFUNCTION(BlueprintCallable, Category = "UI")
-	void ShowHUD(APlayerController* Controller);
+	void RegisterWidgetLayout_Base(UWidgetLayout_Base* InWidget);
 
-	/** 清空四层所有 UI */
+	void PushSoftWidgetToStackAsync(const FGameplayTag& InWidgetStackTag,
+	                                TSoftClassPtr<URPGWidget_ActivatableBase> InSoftWidgetClass,
+	                                TFunction<void(EAsyncPushWidgetState, URPGWidget_ActivatableBase*)>
+	                                AsyncPushStateCallback);
+
 	UFUNCTION(BlueprintCallable, Category = "UI")
-	void HideAllUI(APlayerController* Controller);
+	void PushToWidgetByTag(TSoftObjectPtr<UWidgetLayout_Base> InWidget, FGameplayTag Tag);
+
+private:
+	UPROPERTY(Transient)
+	UWidgetLayout_Base* CreateWidgetLayout_Base;
 };

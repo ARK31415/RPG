@@ -5,12 +5,13 @@
 
 #include "CoreMinimal.h"
 #include "CommonActivatableWidget.h"
+#include "RPGWidget_ActivatableBase.h"
 #include "RPGMainMenuWidget.generated.h"
 /**
  * 主菜单Widget，显示游戏标题和主要选项
  */
 UCLASS()
-class RPG_API URPGMainMenuWidget : public UCommonActivatableWidget
+class RPG_API URPGMainMenuWidget : public URPGWidget_ActivatableBase
 {
 	GENERATED_BODY()
 

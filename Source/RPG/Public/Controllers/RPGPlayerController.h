@@ -16,6 +16,8 @@ class RPG_API ARPGPlayerController : public ARPGBaseController
 public:
 	ARPGPlayerController();
 
+	virtual void BeginPlay() override;
+
 	virtual FGenericTeamId GetGenericTeamId() const override;
 
 private:

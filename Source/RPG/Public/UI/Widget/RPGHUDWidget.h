@@ -5,6 +5,7 @@
 
 #include "CoreMinimal.h"
 #include "CommonActivatableWidget.h"
+#include "RPGWidget_ActivatableBase.h"
 #include "Interface/PawnUIInterface.h"
 #include "Component/UI/RPGPlayerUIComponent.h"
 #include "RPGHUDWidget.generated.h"
@@ -12,7 +13,7 @@
  * HUD Widget，显示玩家状态信息
  */
 UCLASS()
-class RPG_API URPGHUDWidget : public UCommonActivatableWidget
+class RPG_API URPGHUDWidget : public URPGWidget_ActivatableBase
 {
 	GENERATED_BODY()
 

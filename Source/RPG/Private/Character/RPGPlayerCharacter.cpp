@@ -594,7 +594,7 @@ void ARPGPlayerCharacter::ShowMainMenu()
 	URPGUIManagerSubsystem* UIManager = GI ? GI->GetSubsystem<URPGUIManagerSubsystem>() : nullptr;
 	if (UIManager)
 	{
-		UIManager->ShowMainMenu(GetController<APlayerController>());
+		//UIManager->ShowMainMenu(GetController<APlayerController>());
 		UE_LOG(LogRPGPlayerCharacter, Log, TEXT("ARPGPlayerCharacter::ShowMainMenu - Main menu displayed"));
 	}
 	else
