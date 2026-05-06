@@ -11,86 +11,88 @@ graph TB
     subgraph 表现层
         A1[URPGHUDWidget - HUD显示]
         A2[URPGMainMenuWidget - 主菜单]
-        A3[RPGEnemyHealthBarWidget - 敌人血条]
+        A3[URPGEnemyHealthBarWidget - 敌人血条]
     end
     
     subgraph 控制层
         B1[ARPGPlayerController - 玩家控制器]
         B2[ARPGEnemyAIController - AI控制器]
-        B3[ARPGBaseController - 控制器基类]
     end
     
     subgraph 逻辑层
-        C1[URPGPlayerUIComponent - 玩家UI组件]
+        C1[URPGPlayerUIComponent - 玩家UI桥接]
         C2[URPGHealthComponent - 健康组件]
-        C3[URPGPlayerHealthComponent - 玩家健康]
-        C4[URPGEnemyHealthComponent - 敌人健康]
+        C3[UPlayerCombatComponent - 玩家战斗]
+        C4[UEnemyCombatComponent - 敌人战斗]
         C5[URPGAbilitySystemComponent - 能力系统]
+        C6[URPGCharacterAnimInstance - 动画系统]
     end
     
     subgraph 数据层
         D1[URPGAttributeSet - 属性集]
-        D2[URPGPlayerState - 玩家状态]
-        D3[URPGGameModeBase - 游戏模式]
+        D2[ARPGPlayerState - 玩家状态]
+        D3[UDataAsset_StartUpDataBase - 启动数据]
+        D4[UDataAsset_CharacterConfig - 角色配置]
     end
     
     subgraph 基础设施层
         E1[URPGUIManagerSubsystem - UI管理器]
-        E2[UAbilitySystemComponent - GAS系统]
+        E2[URPGEnhancedInputComponent - 输入系统]
         E3[UNavigationSystem - 导航系统]
-        E4[UInputSystem - 输入系统]
+        E4[UAIPerceptionComponent - AI感知]
     end
     
     A1 --> C1
     A2 --> E1
-    A3 --> C4
+    A3 --> C2
     B1 --> C1
-    B2 --> C4
+    B1 --> E2
+    B2 --> E4
+    B2 --> E3
     C1 --> C2
-    C3 --> C2
-    C4 --> C2
+    C3 --> C5
+    C4 --> C5
     C2 --> D1
     C5 --> D1
     D1 --> D2
     D2 --> D3
     E1 --> A1
     E1 --> A2
-    B1 --> E4
-    B2 --> E3
 ```
 
 **图3.1 系统总体架构图**
 
 架构设计的核心原则包括：
 
-（1）组件化设计，功能模块通过ActorComponent实现，按需挂载到Pawn或Character上。健康系统通过URPGHealthComponent组件实现，UI桥接通过URPGPlayerUIComponent组件实现，能力系统通过URPGAbilitySystemComponent组件实现。组件化设计支持功能的灵活组合和复用，不同角色可以挂载不同的组件集合实现差异化功能。
+（1）组件化设计，功能模块通过ActorComponent实现，按需挂载到Pawn或Character上。健康系统通过URPGHealthComponent组件实现，战斗系统通过UPlayerCombatComponent组件实现，UI桥接通过URPGPlayerUIComponent组件实现，能力系统通过URPGAbilitySystemComponent组件实现。所有Pawn扩展组件继承自UPawnExtensionComponentBase基类，该基类提供类型安全的GetOwningPawn<T>()模板方法，用于获取Owner Pawn的强类型引用。
 
-（2）事件驱动通信，模块间通过动态多播委托（Dynamic Multicast Delegate）和GameplayTag实现松耦合通信。健康组件通过OnHealthChanged委托广播生命值变化，UI组件订阅该委托并更新UI显示，避免直接引用和强耦合。事件驱动机制支持一对多的通知关系，多个监听器可以同时订阅同一事件。
+（2）事件驱动通信，模块间通过动态多播委托（Dynamic Multicast Delegate）和GameplayTag实现松耦合通信。健康组件通过OnHealthChanged委托广播生命值变化，UI组件订阅该委托并更新UI显示。战斗组件通过FOnTargetInteractDelegate委托通知武器命中事件。GameplayTag系统定义了完整的标签层次结构（Input/Player/Enemy/Shared/UI），用于能力系统的输入驱动和状态标记。
 
-（3）分层解耦，系统采用"数据组件 → UI组件 → UI Widget"的三层分离架构。URPGHealthComponent负责健康数据管理，URPGPlayerUIComponent负责数据转换和业务逻辑，URPGHUDWidget负责UI显示。三层之间通过接口和委托交互，任何一层的修改不影响其他层。
+（3）分层解耦，系统采用"数据组件 → UI组件 → UI Widget"的三层分离架构。URPGHealthComponent负责健康数据管理，UPawnUIComponent负责数据转换和事件转发，URPGHUDWidget负责UI显示。三层之间通过接口（IPawnUIInterface、IPawnCombatInterface、IPawnDeathInterface）和委托交互，任何一层的修改不影响其他层。
 
-（4）全局子系统管理，跨模块的全局功能通过GameInstanceSubsystem管理。URPGUIManagerSubsystem作为UI管理器子系统，统一管理四层栈UI的生命周期（创建、激活、停用、销毁）。子系统在游戏实例化时创建，游戏全程可用，避免单例模式的滥用。
+（4）数据驱动配置，系统采用DataAsset资产实现数据驱动设计。角色属性通过UDataAsset_CharacterConfig配置，输入映射通过UDataAsset_InputConfig配置，启动能力通过UDataAsset_StartUpDataBase配置。运行时通过GameplayEffect将配置数据应用到ASC，支持编辑器内实时调整而无需重新编译。
 
 ## 3.2 模块总体设计
 
-根据系统总体架构，本课题将系统拆分为六大核心模块：输入模块、控制模块、动画模块、健康系统模块、UI系统模块和AI模块。各模块职责明确，通过接口和委托进行交互。
+根据系统总体架构，本课题将系统拆分为十大核心模块：输入模块、控制模块、动画模块、健康系统模块、UI系统模块、AI模块、战斗系统模块、武器系统模块、能力系统模块和数据资产模块。各模块职责明确，通过接口和委托进行交互。
 
 ### 3.2.1 模块关系图
 
 ```mermaid
 graph LR
     subgraph 输入模块
-        IM[增强输入系统<br/>Enhanced Input]
+        IM[URPGEnhancedInputComponent]
+        IC[UDataAsset_InputConfig]
     end
     
     subgraph 控制模块
         PC[ARPGPlayerController]
-        BC[ARPGBaseController]
+        AIC[ARPGEnemyAIController]
     end
     
     subgraph 动画模块
-        AI[RPGCharacterAnimInstance]
-        BA[RPGBaseAnimInstance]
+        CAI[URPGCharacterAnimInstance]
+        IAL[URPGItemAnimLayersBase]
     end
     
     subgraph 健康系统模块
@@ -100,253 +102,261 @@ graph LR
     end
     
     subgraph UI系统模块
-        UI[URPGUIManagerSubsystem]
+        UIS[URPGUIManagerSubsystem]
         HUD[URPGHUDWidget]
         PUI[URPGPlayerUIComponent]
     end
     
+    subgraph 战斗系统模块
+        PCom[UPlayerCombatComponent]
+        ECom[UEnemyCombatComponent]
+    end
+    
+    subgraph 武器系统模块
+        WB[ARPGWeaponBase]
+        PW[ARPGPlayerWeapon]
+    end
+    
+    subgraph 能力系统模块
+        ASC[URPGAbilitySystemComponent]
+        AS[URPGAttributeSet]
+        GA[URPGGameplayAbility]
+    end
+    
     subgraph AI模块
-        AIC[ARPGEnemyAIController]
         BT[BehaviorTree]
         AP[AIPerception]
     end
     
     IM --> PC
+    IC --> IM
+    PC --> CAI
     PC --> PUI
-    PC --> AI
-    AI --> BA
-    HC --> PHC
-    HC --> EHC
-    HC --> PUI
-    PUI --> HUD
-    UI --> HUD
     AIC --> BT
     AIC --> AP
-    AIC --> EHC
-    HC -.委托.-> PUI
+    PCom --> PW
+    PCom --> ASC
+    ECom --> ASC
+    WB --> PCom
+    PW --> WB
+    HC --> PUI
+    PHC --> HC
+    EHC --> HC
+    PUI --> HUD
+    UIS --> HUD
+    ASC --> AS
+    ASC --> GA
+    HC --> AS
+    CAI --> IAL
 ```
 
 **图3.2 模块关系图**
 
 ### 3.2.2 模块职责说明
 
-（1）输入模块（Input Module），负责处理玩家输入设备（键盘、鼠标、手柄）的输入信号，通过UE5增强输入系统（Enhanced Input）实现输入映射和输入动作绑定。输入模块将原始输入信号转换为游戏逻辑可用的输入动作（Input Action），如移动、跳跃、攻击等。输入模块通过Input Mapping Context（IMC）和Input Action（IA）资源定义输入映射规则，支持输入死区配置、输入优先级管理、输入防抖等功能。输入模块的输出传递给控制模块，由控制模块决定如何响应输入。
+（1）输入模块（Input Module），基于UE5增强输入系统（Enhanced Input）实现，通过URPGEnhancedInputComponent提供模板化的输入绑定方法。输入模块使用UDataAsset_InputConfig数据资产定义输入映射，将输入动作分为NativeInputActions（移动、视角等原生输入）和AbilityInputActions（能力驱动的输入），后者通过GameplayTag标签驱动能力系统响应。
 
-（2）控制模块（Control Module），负责接收输入模块的输入信号，协调角色移动、动画播放、能力释放等行为。控制模块包含ARPGPlayerController（玩家控制器）和ARPGBaseController（控制器基类）。ARPGPlayerController处理玩家特有的控制逻辑，如HUD显示控制、主菜单调用、玩家团队ID管理。ARPGBaseController封装控制器的通用逻辑，供玩家控制器和AI控制器继承。控制模块通过获取角色身上的组件（如UIComponent、HealthComponent）实现功能调用，避免直接操作角色属性。
+（2）控制模块（Control Module），包含ARPGPlayerController（玩家控制器）和ARPGEnemyAIController（AI控制器）。ARPGPlayerController继承自ARPGBaseController（实现IGenericTeamAgentInterface），管理玩家团队ID和HUD显示。ARPGEnemyAIController独立继承自AAIController，包含BehaviorTreeComponent、BlackboardComponent和AIPerceptionComponent，驱动敌人AI决策。两者通过IGenericTeamAgentInterface实现团队系统的敌友识别。
 
-（3）动画模块（Animation Module），负责管理角色动画状态机、动画混合空间和动画蒙太奇。动画模块通过RPGCharacterAnimInstance（角色动画实例）和RPGBaseAnimInstance（基础动画实例）实现动画逻辑。动画模块读取角色的移动速度、方向、状态等属性，驱动动画状态机的状态转换（如从Idle切换到Walk、从Walk切换到Run）。动画模块通过根运动（Root Motion）同步机制确保动画播放与角色物理移动的一致性，避免滑步现象。动画模块的输入来自控制模块的移动指令和状态变化，输出为动画姿态（Animation Pose）传递给渲染系统。
+（3）动画模块（Animation Module），包含三层动画实例：URPGBaseAnimInstance（基础运动参数计算）、URPGCharacterAnimInstance（跳跃状态机、步态系统、Linked Anim Layers管理）、URPGItemAnimLayersBase（武器动画层数据同步）。动画模块通过跳跃状态机（EJumpState: None/Start/Loop/Land）管理跳跃动画阶段，通过GaitAmount步态比例驱动BlendSpace混合，通过LinkAnimLayer方法实现运行时武器动画层的热切换。
 
-（4）健康系统模块（Health System Module），负责管理角色的生命值、死亡状态、复活逻辑等健康相关数据。健康系统采用分层继承架构，URPGHealthComponent作为基类，提供通用的健康数据管理功能（获取当前生命值、获取最大生命值、判断是否死亡、计算生命值百分比）。URPGPlayerHealthComponent继承自URPGHealthComponent，添加玩家特有的功能（复活机制、无敌状态控制）。URPGEnemyHealthComponent继承自URPGHealthComponent，添加敌人特有的功能（死亡动画触发、掉落物生成）。健康系统通过动态多播委托（OnHealthChanged、OnMaxHealthChanged、OnDeathStarted、OnDeathFinished）广播状态变化事件，供UI组件和其他模块订阅。
+（4）健康系统模块（Health System Module），采用分层继承架构。URPGHealthComponent作为基类通过InitializeWithAbilitySystem方法绑定ASC，监听属性变化并广播四个动态多播委托（OnHealthChanged、OnMaxHealthChanged、OnDeathStarted、OnDeathFinished）。URPGPlayerHealthComponent添加无敌状态（InvincibleDuration）和复活机制（Revive）。URPGEnemyHealthComponent添加死亡动画（DeathAnimationDuration）和销毁延迟（DestroyDelay）。
 
-（5）UI系统模块（UI System Module），负责管理游戏的所有UI界面，包括HUD、主菜单、设置界面、敌人血条等。UI系统采用CommonUI框架和四层栈架构（Game层、LocalPlayer层、Modal层、Overlay层），通过URPGUIManagerSubsystem统一管理UI生命周期。UI系统通过URPGPlayerUIComponent作为数据桥接层，订阅健康系统的委托事件，将健康数据转换为UI可用的格式。URPGHUDWidget作为Game层的核心Widget，显示玩家的生命值、法力值、武器图标等关键信息。UI系统通过PushWidgetToLayerStack方法将Widget推送到指定层，确保UI层级关系的正确性。
+（5）UI系统模块（UI System Module），采用CommonUI框架和四层栈架构。URPGUIManagerSubsystem继承自UGameUIManagerSubsystem，通过GameplayTag标签（RPGCommonUI_WidgetStack_Modal/GameMenu/GameHUD/Frontend）管理四层栈。URPGPlayerUIComponent作为数据桥接层，继承自UPawnUIComponent基类，订阅HealthComponent事件并转发为UI友好格式。URPGEnemyUIComponent添加距离检测和血条可见性控制。
 
-（6）AI模块（AI Module），负责实现敌人的智能行为，包括寻路、巡逻、追逐、攻击、逃跑等。AI模块采用行为树（Behavior Tree）和黑板（Blackboard）架构，通过ARPGEnemyAIController控制AI行为逻辑。AI模块通过AIPerception系统感知玩家位置和环境信息，将感知数据存储到黑板中供行为树节点使用。AI模块根据黑板数据执行相应的行为节点（如MoveTo节点实现寻路、Attack节点执行攻击）。AI模块通过URPGEnemyHealthComponent获取敌人健康状态，当血量过低时触发逃跑行为。
+（6）AI模块（AI Module），通过ARPGEnemyAIController管理行为树和AI感知。AI感知配置包含SightRadius（视觉半径）、LoseSightRadius（丢失视觉半径）、PeripheralVisionAngle（边缘视野角度）、PerceptionMaxAge（感知有效期）。行为树任务包含BTTask_RotateToFaceTarget（朝向目标）、BTTask_ActivateAbilityByTag（标签激活能力）、BTTask_FindRandomPatrolPoint（随机巡逻点）、BTTask_FindStrafingPoint_EQS（环境查询侧移点）。
+
+（7）战斗系统模块（Combat System Module），采用分层组件架构。UPawnCombatComponent作为基类管理武器注册（CharacterCarriedWeaponMap）和碰撞切换（ToggleWeaponCollision）。UPlayerCombatComponent添加连招管理系统，通过TMap<ERPGComboType, int32>分通道（轻击/重击）管理连招计数，通过定时器控制连招窗口。UEnemyCombatComponent重写命中检测逻辑，提供敌人特有的碰撞控制。
+
+（8）武器系统模块（Weapon System Module），ARPGWeaponBase作为武器基类包含WeaponMesh（静态网格）和WeaponCollisionBox（碰撞盒），通过FOnTargetInteractDelegate委托通知命中和拔出事件。ARPGPlayerWeapon持有FRPGPlayerWeaponData结构（动画层、装卸蒙太奇、武器输入映射、基础伤害、武器图标），并管理GrantedAbilitySpecHandles用于能力授予和移除。
+
+（9）能力系统模块（GAS Module），URPGAbilitySystemComponent扩展UAbilitySystemComponent，提供OnAbilityInputPressed/Released输入标签处理、GrantPlayerWeaponAbility武器能力授予、TryActivateAbilityByTag标签激活能力。URPGAttributeSet定义四类属性：主属性（Strength/Intelligence/Vitality/Agility）、次属性（Armor/CriticalHitChance/CriticalHitDamage/HealthRegeneration/ManaRegeneration）、核心属性（CurrentHealth/MaxHealth/CurrentRage/MaxRage/CurrentMana/MaxMana）、元属性（DamageTaken/IncomingXP/AttackPower/DefensePower）。URPGGameplayAbility提供两种激活策略（OnTriggered/OnGive）。
+
+（10）数据资产模块（Data Asset Module），采用数据驱动设计。UDataAsset_InputConfig定义输入映射（DefaultMappingContext、NativeInputActions、AbilityInputActions）。UDataAsset_CharacterConfig定义玩家角色属性（FCharacterBaseAttributes）。UDataAsset_EnemyConfig定义敌人属性（FEnemyBaseAttributes，包含抗性系统）。UDataAsset_StartUpDataBase定义启动能力（ActiveOnGivenAbilities、ReactiveAbilities、StartUpGameplayEffect），子类UDataAsset_PlayerStartUpData添加PlayerStartUpAbilitySet（InputTag + AbilityToGrant配对）。
 
 ## 3.3 输入模块概要设计
 
-输入模块基于UE5增强输入系统（Enhanced Input）实现，相比旧版输入系统（Legacy Input），增强输入系统提供了更强大的输入映射、输入修饰符（Input Modifier）和输入触发器（Input Trigger）机制。
+输入模块基于UE5增强输入系统（Enhanced Input）实现，通过URPGEnhancedInputComponent提供模板化的输入绑定方法，并使用UDataAsset_InputConfig数据资产实现输入配置的数据驱动。
 
 ### 3.3.1 输入模块架构
 
 ```mermaid
 graph TB
-    subgraph 输入资源
-        IMC[Input Mapping Context]
-        IA_Move[Input Action: Move]
-        IA_Jump[Input Action: Jump]
-        IA_Attack[Input Action: Attack]
+    subgraph 输入配置资产
+        IC[UDataAsset_InputConfig]
+        IMC[DefaultMappingContext]
+        NIA[NativeInputActions]
+        AIA[AbilityInputActions]
     end
     
-    subgraph 输入处理
-        IC[UEnhancedInputComponent]
-        IM1[Input Modifier: Dead Zone]
-        IM2[Input Modifier: Scale]
-        IT1[Input Trigger: Pressed]
-        IT2[Input Trigger: Released]
+    subgraph 输入组件
+        EIC[URPGEnhancedInputComponent]
+        BNA[BindNativeInputAction - 模板方法]
+        BAI[BindAbilityInputAction - 模板方法]
     end
     
     subgraph 输入响应
-        PC[ARPGPlayerController]
         Char[ARPGPlayerCharacter]
+        Move[Input_Move]
+        Look[Input_Look]
+        AbilityPress[Input_AbilityInputPressed]
+        AbilityRelease[Input_AbilityInputReleased]
     end
     
-    IMC --> IA_Move
-    IMC --> IA_Jump
-    IMC --> IA_Attack
-    IA_Move --> IM1
-    IA_Move --> IM2
-    IA_Move --> IT1
-    IA_Jump --> IT1
-    IA_Jump --> IT2
-    IA_Attack --> IT1
-    IT1 --> IC
-    IT2 --> IC
-    IC --> PC
-    PC --> Char
+    subgraph 能力系统
+        ASC[URPGAbilitySystemComponent]
+        OnPress[OnAbilityInputPressed]
+        OnRelease[OnAbilityInputReleased]
+    end
+    
+    IC --> IMC
+    IC --> NIA
+    IC --> AIA
+    NIA --> BNA
+    AIA --> BAI
+    EIC --> BNA
+    EIC --> BAI
+    BNA --> Char
+    Move --> Char
+    Look --> Char
+    BAI --> AbilityPress
+    BAI --> AbilityRelease
+    AbilityPress --> ASC
+    AbilityRelease --> ASC
+    ASC --> OnPress
+    ASC --> OnRelease
 ```
 
 **图3.3 输入模块架构图**
 
-输入模块的核心组件包括：
+输入模块的核心设计特点：
 
-（1）Input Mapping Context（IMC），定义输入动作与输入源的映射关系。本课题中定义了RPG_IMC输入映射上下文，将键盘WASD键映射到Move动作，将空格键映射到Jump动作，将鼠标左键映射到Attack动作。IMC支持多输入源绑定，如同时支持键盘和手柄输入。
+（1）模板化绑定方法，URPGEnhancedInputComponent通过C++模板方法BindNativeInputAction和BindAbilityInputAction实现类型安全的输入绑定。BindNativeInputAction接受InputConfig、InputTag、TriggerEvent和回调函数参数，通过FindNativeInputActionByTag查找对应的UInputAction并绑定。BindAbilityInputAction遍历AbilityInputActions数组，为每个有效配置分别绑定Started和Completed事件。
 
-（2）Input Action（IA），定义输入动作的类型和参数。Move动作采用Axis2D类型，返回二维向量（X轴控制前后移动，Y轴控制左右移动）。Jump动作采用Boolean类型，返回按下/释放状态。Attack动作采用Boolean类型，支持连击检测。
+（2）GameplayTag驱动的能力输入，AbilityInputActions使用FRPGInputActionConfig结构，将InputTag与InputAction配对。当输入触发时，系统将InputTag传递给ASC的OnAbilityInputPressed方法，ASC遍历已授予的能力找到匹配标签的能力并激活。这种设计实现了输入与能力的解耦，添加新能力只需配置数据资产，无需修改代码。
 
-（3）Input Modifier，对输入信号进行预处理。Dead Zone修饰器用于处理摇杆死区，避免摇杆轻微偏移导致角色移动。Scale修饰器用于缩放输入值，调整移动速度或灵敏度。Negate修饰器用于反转输入轴，适配不同的控制习惯。
-
-（4）Input Trigger，定义输入动作的触发条件。Pressed触发器在按键按下时触发一次。Released触发器在按键释放时触发一次。Hold触发器在按键持续按下时持续触发。Tap触发器检测快速点击，用于区分单击和长按。
-
-（5）UEnhancedInputComponent，增强输入组件，负责绑定输入动作到回调函数。在ARPGPlayerCharacter的SetupPlayerInputComponent方法中，通过BindAction方法将输入动作绑定到对应的处理函数：
-
-```cpp
-InputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ARPGPlayerCharacter::OnMoveInput);
-InputComponent->BindAction(JumpAction, ETriggerEvent::Pressed, this, &ARPGPlayerCharacter::OnJumpInput);
-InputComponent->BindAction(AttackAction, ETriggerEvent::Pressed, this, &ARPGPlayerCharacter::OnAttackInput);
-```
-
-### 3.3.2 输入优先级管理
-
-输入模块通过输入优先级标签（Input Priority Tag）实现输入屏蔽。当UI界面打开时，UI层通过BlockInput机制屏蔽角色控制输入，避免玩家同时操作角色和UI。当UI界面关闭时，恢复角色控制输入。输入优先级的管理通过CommonUI框架自动处理，无需手动实现。
+（3）数据驱动的输入配置，UDataAsset_InputConfig将所有输入映射集中管理，包含DefaultMappingContext（默认输入映射上下文）、NativeInputActions（原生输入动作数组）和AbilityInputActions（能力输入动作数组）。编辑器内可直接修改配置，支持多套输入方案切换。
 
 ## 3.4 控制模块概要设计
 
-控制模块负责协调输入模块、动画模块、健康系统模块和UI系统模块的工作，实现角色的整体控制逻辑。控制模块采用控制器（Controller）架构，通过ARPGPlayerController实现玩家控制，通过ARPGEnemyAIController实现AI控制。
+控制模块负责协调输入模块、动画模块、健康系统模块和UI系统模块的工作，实现角色的整体控制逻辑。控制模块包含两条独立的继承链：玩家控制器链（APlayerController → ARPGBaseController → ARPGPlayerController）和AI控制器链（AAIController → ARPGEnemyAIController）。
 
 ### 3.4.1 控制器类结构
 
 ```mermaid
 classDiagram
-    class AController {
+    class APlayerController {
         <<UE Engine>>
-        +APawn* Pawn
-        +BeginPlay()
+    }
+    
+    class AAIController {
+        <<UE Engine>>
+    }
+    
+    class IGenericTeamAgentInterface {
+        <<Interface>>
+        +GetGenericTeamId() FGenericTeamId
+        +GetTeamAttitudeTowards(Other) ETeamAttitude
     }
     
     class ARPGBaseController {
         +ARPGBaseController()
-        +BeginPlay()
-        +GetGenericTeamId()
     }
     
     class ARPGPlayerController {
-        +ARPGPlayerController()
         +BeginPlay()
-        +GetGenericTeamId()
-        -FGenericTeamId PlayerTeamId
+        +GetGenericTeamId() FGenericTeamId
+        -PlayerTeamId FGenericTeamId
     }
     
     class ARPGEnemyAIController {
-        +ARPGEnemyAIController()
-        +BeginPlay()
-        +RunBehaviorTree()
-        -UBehaviorTree* EnemyBehaviorTree
+        +RunBehaviorTreeWithBlackboard(BT)
+        +GetTeamAttitudeTowards(Other) ETeamAttitude
+        +OnTargetPerceptionUpdated(Actor, Stimulus)
+        #SightRadius float
+        #LoseSightRadius float
+        #PeripheralVisionAngle float
+        -BehaviorTreeComponent
+        -BlackboardComp
+        -EnemyPerceptionComponent
+        -EnemySightConfig
+        -PerceivedActors TMap
     }
     
-    AController <|-- ARPGBaseController
+    APlayerController <|-- ARPGBaseController
+    ARPGBaseController ..|> IGenericTeamAgentInterface
     ARPGBaseController <|-- ARPGPlayerController
-    ARPGBaseController <|-- ARPGEnemyAIController
+    AAIController <|-- ARPGEnemyAIController
 ```
 
 **图3.4 控制器类图**
 
-ARPGPlayerController的核心职责包括：
-
-（1）HUD显示控制，在BeginPlay方法中调用ShowHUD方法，通过URPGUIManagerSubsystem将URPGHUDWidget推送到Game层。ShowHUD方法的实现如下：
-
-```cpp
-void ARPGPlayerController::BeginPlay()
-{
-    Super::BeginPlay();
-    
-    if (URPGUIManagerSubsystem* UIManager = GetGameInstance()->GetSubsystem<URPGUIManagerSubsystem>())
-    {
-        UIManager->ShowHUD(this);
-    }
-}
-```
-
-（2）团队ID管理，通过GetGenericTeamId方法返回玩家的团队ID，用于AI感知系统的敌友识别。玩家团队ID设置为0（中立团队），AI感知系统通过启用bDetectNeutrals配置检测中立团队。
-
-（3）输入屏蔽控制，当UI界面打开时，控制器暂时屏蔽角色的游戏输入，避免玩家同时操作角色和UI。CommonUI框架通过BlockInput机制自动处理输入屏蔽，控制器无需手动实现。
-
-ARPGEnemyAIController的核心职责包括：
-
-（1）行为树管理，在BeginPlay方法中调用RunBehaviorTree方法，启动敌人的行为树。行为树定义了敌人的行为逻辑（巡逻、追逐、攻击、逃跑）。
-
-（2）AI感知管理，配置AIPerceptionComponent的感知范围和感知类型（视觉、听觉）。当感知到玩家时，将玩家位置写入黑板，触发行为树的追逐行为。
-
-（3）目标追踪，通过黑板存储当前目标（TargetActor）和最后已知目标位置（TargetLocation）。行为树的MoveTo节点使用这些数据进行寻路。
+ARPGPlayerController的核心职责包括团队ID管理（PlayerTeamId = 0，中立团队）和UI初始化。ARPGEnemyAIController独立继承AAIController，包含完整的AI感知配置（SightRadius、LoseSightRadius、PeripheralVisionAngle、PerceptionMaxAge）、感知目标缓存（PerceivedActors TMap）和黑板数据更新（UpdateNearestTarget）。
 
 ## 3.5 动画模块概要设计
 
-动画模块负责管理角色的动画状态机、动画混合空间和动画蒙太奇，实现角色行为与动画表现的精准匹配。动画模块通过Animation Blueprint实现动画逻辑，通过AnimInstance类提供动画数据接口。
+动画模块负责管理角色的动画状态机、动画混合空间和动画蒙太奇。动画模块采用三层动画实例架构：URPGBaseAnimInstance提供基础运动参数，URPGCharacterAnimInstance实现角色动画状态管理，URPGItemAnimLayersBase实现武器动画层数据同步。
 
 ### 3.5.1 动画模块架构
 
 ```mermaid
 graph TB
-    subgraph 动画实例
-        CAI[RPGCharacterAnimInstance]
-        BAI[RPGBaseAnimInstance]
+    subgraph 动画实例层次
+        BAI[URPGBaseAnimInstance]
+        CAI[URPGCharacterAnimInstance]
+        IAL[URPGItemAnimLayersBase]
     end
     
-    subgraph 动画状态机
-        SM[State Machine]
-        Idle[Idle State]
-        Walk[Walk State]
-        Run[Run State]
-        Jump[Jump State]
-        Attack[Attack State]
+    subgraph 基础运动参数
+        GS[GroundSpeed]
+        Dir[Direction]
+        Vel[Velocity]
+        VS[VerticalSpeed]
+        bMoving[bIsMoving]
+        bFalling[bIsFalling]
     end
     
-    subgraph 动画混合
-        BS2D[BlendSpace 2D]
-        MT[Animation Montage]
+    subgraph 角色动画状态
+        MS[移动状态 Idle/Walk/Run/Sprint]
+        JS[跳跃状态 None/Start/Loop/Land]
+        GA[GaitAmount 步态比例]
+        LAL[Linked Anim Layers]
     end
     
-    subgraph 数据源
-        Speed[移动速度]
-        Direction[移动方向]
-        bIsInAir[是否在空中]
-        bIsAttacking[是否攻击]
+    subgraph 武器动画层
+        WT[WeaponType]
+        CS[CombatState]
+        CI[ComboIndex]
+        ASM[AttackSpeedMultiplier]
     end
     
+    BAI --> GS
+    BAI --> Dir
+    BAI --> Vel
+    BAI --> VS
+    BAI --> bMoving
+    BAI --> bFalling
     CAI --> BAI
-    BAI --> SM
-    SM --> Idle
-    SM --> Walk
-    SM --> Run
-    SM --> Jump
-    SM --> Attack
-    Walk --> BS2D
-    Run --> BS2D
-    Attack --> MT
-    Speed --> BS2D
-    Direction --> BS2D
-    bIsInAir --> SM
-    bIsAttacking --> SM
+    CAI --> MS
+    CAI --> JS
+    CAI --> GA
+    CAI --> LAL
+    IAL --> BAI
+    IAL --> WT
+    IAL --> CS
+    IAL --> CI
+    IAL --> ASM
 ```
 
 **图3.5 动画模块架构图**
 
-RPGCharacterAnimInstance的核心职责包括：
+动画模块的核心设计特点：
 
-（1）动画状态管理，通过State Machine管理角色的动画状态。状态机包含Idle、Walk、Run、Jump、Attack等状态，状态之间的转换由转换规则（Transition Rule）控制。转换规则基于角色属性（如移动速度、是否在空中）判断是否满足转换条件。
+（1）跳跃状态机（Jump State Machine），通过EJumpState枚举（None/Start/Loop/Land）管理跳跃动画阶段。URPGCharacterAnimInstance维护TimeSinceJumpStart、TimeSinceGrounded等内部跟踪变量，配置JumpStartVerticalSpeedThreshold和LandDetectionDelay等参数，实现精确的跳跃动画切换。
 
-（2）动画混合控制，通过2D BlendSpace实现移动方向的动画混合。BlendSpace的X轴表示移动速度，Y轴表示移动方向（前进、后退、左移、右移）。根据角色的实际移动速度和方向，BlendSpace插值计算最终的动画姿态。
+（2）GaitAmount步态系统，通过GaitAmount浮点值（0.0-3.0）驱动BlendSpace混合。Idle对应0.0，Walk对应1.0，Run对应2.0，Sprint对应3.0。步态系统通过速度阈值（WalkSpeedThreshold/RunSpeedThreshold/SprintSpeedThreshold）计算当前GaitAmount，实现平滑的步态过渡。
 
-（3）动画蒙太奇播放，通过PlaySlotAnimationAsDynamicMontage方法播放攻击动画。攻击动画通过蒙太奇实现，支持动画分段（Section）和通知（Notify）。动画通知用于触发攻击判定、音效播放等事件。
-
-（4）根运动同步，通过Root Motion同步机制确保动画播放与角色物理移动的一致性。当动画包含根运动时，角色的位置由动画驱动，而非物理系统。根运动同步避免滑步现象，提升动画表现的真实感。
-
-RPGBaseAnimInstance的核心职责包括：
-
-（1）基础动画数据接口，提供动画状态的查询方法（如IsIdle、IsMoving、IsAttacking）。这些方法供状态机的转换规则使用。
-
-（2）动画初始化，在NativeInitializeAnimation方法中获取角色引用（Character Reference），建立动画实例与角色的关联。通过角色引用获取角色的移动速度、方向、状态等属性。
-
-（3）动画更新逻辑，在NativeUpdateAnimation方法中更新动画状态。每帧调用该方法，根据角色的最新状态更新动画参数（如Speed、Direction、bIsInAir）。
+（3）Linked Anim Layers武器动画切换，通过LinkAnimLayer/UnlinkAnimLayer方法实现运行时动画层的热切换。当玩家装备不同武器时，URPGCharacterAnimInstance链接对应的URPGItemAnimLayersBase子类，该子类每帧从PlayerCombatComponent同步战斗状态数据（CombatState、ComboIndex、bIsInComboWindow等），驱动武器特有的动画逻辑。
 
 ## 3.6 健康系统模块概要设计
 
@@ -357,12 +367,11 @@ RPGBaseAnimInstance的核心职责包括：
 ```mermaid
 classDiagram
     class UPawnExtensionComponentBase {
-        <<UE Component>>
-        +APawn* GetPawnOwner()
+        #GetOwningPawn~T~() T*
+        #GetOwningController~T~() T*
     }
     
     class URPGHealthComponent {
-        +URPGHealthComponent()
         +InitializeWithAbilitySystem(ASC)
         +GetCurrentHealth() float
         +GetMaxHealth() float
@@ -373,25 +382,28 @@ classDiagram
         +OnDeathStarted FOnDeathStartedDelegate
         +OnDeathFinished FOnDeathFinishedDelegate
         #OnHealthAttributeChanged(Data)
-        #OnMaxHealthAttributeChanged(Data)
         #StartDeath()
         #FinishDeath()
-        #AbilitySystemComponent UAbilitySystemComponent
         #CurrentHealth float
         #MaxHealth float
         #bIsDead bool
     }
     
     class URPGPlayerHealthComponent {
-        +Revive()
-        +IsInvincible() bool
         +SetInvincible(bool)
+        +IsInvincible() bool
+        +Revive(HealthPercent)
+        -bIsInvincible bool
+        -InvincibleDuration float
     }
     
     class URPGEnemyHealthComponent {
-        +OnDeathFinished()
-        #SpawnDropItems()
-        #PlayDeathAnimation()
+        +SetPlayDeathAnimation(bool)
+        +ShouldPlayDeathAnimation() bool
+        -bPlayDeathAnimation bool
+        -DeathAnimationDuration float
+        -bDestroyOnDeath bool
+        -DestroyDelay float
     }
     
     UPawnExtensionComponentBase <|-- URPGHealthComponent
@@ -401,52 +413,9 @@ classDiagram
 
 **图3.6 健康系统类图**
 
-URPGHealthComponent的核心职责包括：
-
-（1）健康数据管理，通过CurrentHealth、MaxHealth、bIsDead属性管理角色的健康状态。提供GetCurrentHealth、GetMaxHealth、IsDead、GetHealthPercent等查询方法，供其他模块获取健康数据。
-
-（2）ASC属性监听，通过InitializeWithAbilitySystem方法绑定Ability System Component（ASC），监听ASC的健康属性变化。当ASC的健康属性变化时，触发OnHealthAttributeChanged回调，更新CurrentHealth和MaxHealth属性。
-
-（3）委托事件广播，通过OnHealthChanged、OnMaxHealthChanged、OnDeathStarted、OnDeathFinished四个动态多播委托广播健康状态变化。委托采用DECLARE_DYNAMIC_MULTICAST_DELEGATE宏声明，支持蓝图订阅。委托回调函数必须标记为UFUNCTION()，否则会导致编译错误。
-
-（4）死亡状态机，通过StartDeath和FinishDeath方法实现死亡流程。StartDeath方法在生命值降至0时调用，触发OnDeathStarted委托，播放死亡动画。FinishDeath方法在死亡动画播放完成后调用，触发OnDeathFinished委托，销毁角色或生成掉落物。
-
-URPGPlayerHealthComponent的核心职责包括：
-
-（1）复活机制，通过Revive方法实现玩家复活逻辑。复活方法将CurrentHealth设置为MaxHealth的一定比例（如50%），将bIsDead设置为false，触发OnHealthChanged委托更新UI显示。
-
-（2）无敌状态控制，通过SetInvincible和IsInvincible方法实现无敌状态。无敌状态下，玩家不受伤害，健康属性变化被忽略。无敌状态用于实现无敌帧（Invincibility Frames）机制，在玩家受到伤害后提供短暂的无敌时间，避免连续伤害。
-
-URPGEnemyHealthComponent的核心职责包括：
-
-（1）死亡动画触发，在FinishDeath方法中播放敌人死亡动画。死亡动画通过动画蒙太奇实现，支持不同的死亡类型（如普通死亡、爆头死亡）。
-
-（2）掉落物生成，在FinishDeath方法中生成掉落物（如金币、道具）。掉落物的类型和数量通过配置表定义，支持随机掉落概率。
-
-### 3.6.2 健康系统与ASC集成
-
-健康系统通过Gameplay Ability System（GAS）实现属性管理。ASC负责管理角色的所有属性（Health、Mana、Attack、Defense等），通过URPGAttributeSet定义属性结构。健康组件通过ASC的属性变化委托监听健康属性变化，实现数据同步。
-
-属性变化监听的核心代码：
-
-```cpp
-void URPGHealthComponent::InitializeWithAbilitySystem(UAbilitySystemComponent* ASC)
-{
-    AbilitySystemComponent = ASC;
-    
-    // 监听健康属性变化
-    FGameplayAttribute HealthAttribute = UAbilitySystemBlueprintLibrary::MakeAttributeFromName(TEXT("Health"));
-    ASC->GetGameplayAttributeValueChangeDelegate(HealthAttribute).AddUObject(this, &URPGHealthComponent::OnHealthAttributeChanged);
-    
-    // 监听最大健康属性变化
-    FGameplayAttribute MaxHealthAttribute = UAbilitySystemBlueprintLibrary::MakeAttributeFromName(TEXT("MaxHealth"));
-    ASC->GetGameplayAttributeValueChangeDelegate(MaxHealthAttribute).AddUObject(this, &URPGHealthComponent::OnMaxHealthAttributeChanged);
-}
-```
-
 ## 3.7 UI系统模块概要设计
 
-UI系统模块负责管理游戏的所有UI界面，采用CommonUI框架和四层栈架构，通过URPGUIManagerSubsystem统一管理UI生命周期。UI系统通过URPGPlayerUIComponent作为数据桥接层，实现健康系统与UI Widget的解耦。
+UI系统模块负责管理游戏的所有UI界面，采用CommonUI框架和四层栈架构，通过URPGUIManagerSubsystem统一管理UI生命周期。UI系统通过UPawnUIComponent作为数据桥接层基类，实现健康系统与UI Widget的解耦。
 
 ### 3.7.1 UI系统架构
 
@@ -456,102 +425,46 @@ graph TB
         UIS[URPGUIManagerSubsystem]
     end
     
-    subgraph Game层
+    subgraph GameHUD层
         HUD[URPGHUDWidget]
     end
     
-    subgraph Menu层
+    subgraph Frontend层
         MM[URPGMainMenuWidget]
     end
     
+    subgraph GameMenu层
+        Settings[设置界面]
+    end
+    
     subgraph 数据桥接层
+        PUIBase[UPawnUIComponent - 基类]
         PUI[URPGPlayerUIComponent]
         EUI[URPGEnemyUIComponent]
     end
     
-    subgraph 数据层
+    subgraph 数据源
         HC[URPGHealthComponent]
-        PHC[URPGPlayerHealthComponent]
     end
     
     UIS --> HUD
     UIS --> MM
+    UIS --> Settings
     HUD --> PUI
-    PUI --> HC
-    PUI --> PHC
-    HC -.OnHealthChanged.-> PUI
-    PHC -.OnHealthChanged.-> PUI
+    PUI --> PUIBase
+    EUI --> PUIBase
+    PUIBase --> HC
+    HC -.OnHealthChanged.-> PUIBase
+    PUIBase -.OnHealthChangedForUI.-> HUD
 ```
 
 **图3.7 UI系统架构图**
 
-URPGUIManagerSubsystem的核心职责包括：
-
-（1）UI生命周期管理，通过CreateWidget、InitializeWidget、ActivateWidget、DeactivateWidget、DestroyWidget方法管理UI Widget的生命周期。UI Widget的创建和销毁由UI管理器统一处理，避免手动管理导致的内存泄漏。
-
-（2）四层栈管理，通过PushWidgetToLayerStack方法将Widget推送到指定层（Game层、Menu层、Modal层、Overlay层）。四层栈采用栈结构管理Widget，支持Widget的层级堆叠和弹出。当弹出顶层Widget时，自动激活次顶层Widget。
-
-（3）输入屏蔽管理，当Modal层或Menu层的Widget激活时，自动屏蔽Game层的输入，避免玩家同时操作角色和UI。当Widget停用时，恢复Game层的输入。输入屏蔽通过CommonUI框架的BlockInput机制自动处理。
-
-URPGHUDWidget的核心职责包括：
-
-（1）HUD显示，通过HealthBar、ManaBar、HealthText、ManaText、WeaponIcon等UI元素显示玩家状态信息。UI元素通过UPROPERTY(BlueprintReadOnly, meta = (BindWidget))标记，与蓝图Widget绑定。
-
-（2）委托订阅，在Initialize方法中获取URPGPlayerUIComponent引用，订阅OnHealthChanged、OnManaChanged等委托事件。当收到委托回调时，更新对应的UI元素。
-
-（3）Widget激活/停用，在NativeOnActivated方法中初始化委托订阅，在NativeOnDeactivated方法中清理委托绑定。委托清理通过RemoveAll方法实现，避免悬空指针和无效回调。
-
-URPGPlayerUIComponent的核心职责包括：
-
-（1）数据桥接，订阅URPGHealthComponent的OnHealthChanged委托，将健康数据转换为UI可用的格式。当收到健康变化事件时，触发OnHealthChangedForUI委托，通知HUD Widget更新显示。
-
-（2）法力值管理，通过CurrentMana和MaxMana属性管理玩家的法力值。提供UpdateMana方法更新法力值，触发OnManaChangedForUI委托通知HUD Widget。
-
-（3）武器状态管理，通过OnCurrentWeaponChangedForUI委托广播武器变化事件。当玩家装备或卸下武器时，触发该委托，HUD Widget更新武器图标显示。
-
-### 3.7.2 UI与数据层解耦
-
-UI系统通过接口（Interface）和委托（Delegate）实现与数据层的解耦。URPGHUDWidget不直接引用URPGHealthComponent，而是通过URPGPlayerUIComponent获取数据。URPGPlayerUIComponent实现IPawnUIInterface接口，提供健康数据查询方法。
-
-接口定义：
-
-```cpp
-UINTERFACE(MinimalAPI)
-class UIPawnUIInterface : public UInterface
-{
-    GENERATED_BODY()
-};
-
-class IPawnUIInterface
-{
-    GENERATED_BODY()
-    
-public:
-    UFUNCTION(BlueprintCallable, Category="UI Interface")
-    virtual URPGHealthComponent* GetHealthComponent() const = 0;
-};
-```
-
-URPGPlayerUIComponent实现接口：
-
-```cpp
-class RPG_API URPGPlayerUIComponent : public UPawnUIComponent, public IPawnUIInterface
-{
-    GENERATED_BODY()
-    
-public:
-    virtual URPGHealthComponent* GetHealthComponent() const override
-    {
-        return GetHealthComponentInternal();
-    }
-};
-```
-
-通过接口抽象，HUD Widget可以处理任何实现IPawnUIInterface的组件，不依赖具体的组件类型。当需要添加新的UI数据源时，只需实现接口即可，无需修改HUD Widget代码。
+UI系统通过GameplayTag标签管理四层栈：RPGCommonUI_WidgetStack_Modal（模态层）、RPGCommonUI_WidgetStack_GameMenu（游戏菜单层）、RPGCommonUI_WidgetStack_GameHUD（游戏HUD层）、RPGCommonUI_WidgetStack_Frontend（前端层）。URPGUIManagerSubsystem提供PushSoftWidgetToStackAsync方法异步加载和推送Widget，支持软引用避免资源常驻内存。
 
 ## 3.8 AI模块概要设计
 
-AI模块负责实现敌人的智能行为，采用行为树（Behavior Tree）和黑板（Blackboard）架构，通过AIPerception系统感知玩家位置和环境信息。AI模块通过ARPGEnemyAIController控制AI行为逻辑，实现巡逻、追逐、攻击、逃跑等多样化行为。
+AI模块负责实现敌人的智能行为，采用行为树（Behavior Tree）和黑板（Blackboard）架构，通过AIPerception系统感知玩家位置和环境信息。
 
 ### 3.8.1 AI模块架构
 
@@ -563,100 +476,245 @@ graph TB
     
     subgraph 行为树
         BT[BehaviorTree]
-        Root[Root: Selector]
-        Seq1[Sequence: Combat]
-        Seq2[Sequence: Patrol]
-        Cond1[Condition: CanAttack?]
-        Cond2[Condition: HasTarget?]
-        Act1[Action: Attack]
-        Act2[Action: MoveToTarget]
-        Act3[Action: PatrolToWaypoint]
+        subgraph Tasks
+            T1[BTTask_RotateToFaceTarget]
+            T2[BTTask_ActivateAbilityByTag]
+            T3[BTTask_FindRandomPatrolPoint]
+            T4[BTTask_FindStrafingPoint_EQS]
+            T5[BTTask_SetMovementSpeed]
+        end
+        subgraph Services
+            S1[BTService_FindNearestPlayer]
+            S2[BTService_OrientToTargetActor]
+        end
+        subgraph Decorators
+            D1[BTDecorator_RandomChance]
+        end
     end
     
     subgraph 黑板
         BB[Blackboard]
         Target[TargetActor]
         TargetLoc[TargetLocation]
-        PatrolLoc[PatrolLocation]
     end
     
     subgraph AI感知
         AP[AIPerceptionComponent]
-        Sight[Sight Config]
-        Hearing[Hearing Config]
+        Sight[AISenseConfig_Sight]
     end
     
     EAC --> BT
     EAC --> AP
-    BT --> Root
-    Root --> Seq1
-    Root --> Seq2
-    Seq1 --> Cond1
-    Cond1 --> Act1
-    Seq2 --> Cond2
-    Cond2 --> Act2
-    Cond2 --> Act3
+    BT --> Tasks
+    BT --> Services
+    BT --> Decorators
+    AP --> Sight
     AP --> BB
-    BB --> Target
-    BB --> TargetLoc
-    BB --> PatrolLoc
     BT --> BB
 ```
 
 **图3.8 AI模块架构图**
 
-ARPGEnemyAIController的核心职责包括：
+ARPGEnemyAIController配置的AI感知参数包括：SightRadius（视觉感知半径）、LoseSightRadius（丢失视觉半径）、PeripheralVisionAngle（边缘视野角度）、PerceptionMaxAge（感知信息有效期）、bDetectEnemies（是否检测敌人）。感知系统通过OnTargetPerceptionUpdated回调更新PerceivedActors缓存，并通过UpdateNearestTarget方法将最近目标写入黑板。
 
-（1）行为树启动，在BeginPlay方法中调用RunBehaviorTree方法，启动敌人的行为树。行为树通过UBehaviorTree资源定义，支持可视化编辑。行为树的根节点为Selector节点，按优先级尝试执行子节点。
+## 3.9 战斗系统模块概要设计
 
-（2）黑板数据管理，通过黑板存储AI的目标、状态、巡逻点等数据。黑板数据由感知系统写入（如TargetActor、TargetLocation），由行为树节点读取和执行。黑板支持多种数据类型（Actor、Vector、Float、Bool等）。
+战斗系统模块负责管理角色的武器注册、碰撞检测、连招计数和命中处理。战斗系统采用分层组件架构，UPawnCombatComponent作为基类提供通用功能，子类添加角色特有逻辑。
 
-（3）感知系统配置，配置AIPerceptionComponent的感知类型（视觉、听觉）和感知范围（Sight Radius、Peripheral Vision Angle）。当感知到玩家时，触发OnTargetPerceptionUpdated回调，将玩家信息写入黑板。
+### 3.9.1 战斗系统类结构
 
-行为树的核心节点包括：
-
-（1）Combat Sequence节点，处理战斗行为。通过CanAttack条件节点判断是否可以攻击（如玩家在攻击范围内、攻击冷却已结束）。如果条件满足，执行Attack动作节点，播放攻击动画并触发攻击判定。
-
-（2）Patrol Sequence节点，处理巡逻行为。通过HasTarget条件节点判断是否有目标（如玩家进入感知范围）。如果有目标，执行MoveToTarget动作节点，寻路到目标位置。如果没有目标，执行PatrolToWaypoint动作节点，移动到下一个巡逻点。
-
-（3）Condition节点，判断行为执行条件。CanAttack节点检查玩家距离和攻击冷却。HasTarget节点检查黑板中的TargetActor是否有效。条件节点返回Success或Failure，控制行为树的执行流程。
-
-（4）Action节点，执行具体的行为逻辑。Attack节点播放攻击动画，通过动画通知触发攻击判定。MoveToTarget节点调用UNavigationSystem的FindPathToActor方法，寻路到目标位置。PatrolToWaypoint节点移动到预设的巡逻点，到达后选择下一个巡逻点。
-
-### 3.8.2 AI感知与团队系统
-
-AI感知系统通过TeamId实现敌友识别。玩家团队ID设置为0（中立团队），敌人团队ID设置为1（敌对团队）。AIPerceptionComponent通过bDetectNeutrals配置启用中立团队检测，确保敌人能够感知到玩家。
-
-感知配置的核心代码：
-
-```cpp
-UAIPerceptionComponent* PerceptionComponent = CreateDefaultSubobject<UAIPerceptionComponent>(TEXT("PerceptionComponent"));
-
-// 配置视觉感知
-UAISenseConfig_Sight* SightConfig = CreateDefaultSubobject<UAISenseConfig_Sight>(TEXT("SightConfig"));
-SightConfig->SightRadius = 1000.0f;
-SightConfig->LoseSightRadius = 1200.0f;
-SightConfig->PeripheralVisionAngleDegrees = 90.0f;
-SightConfig->DetectionByAffiliation.bDetectEnemies = true;
-SightConfig->DetectionByAffiliation.bDetectFriendlies = false;
-SightConfig->DetectionByAffiliation.bDetectNeutrals = true;  // 检测中立团队（玩家）
-
-PerceptionComponent->ConfigureSense(*SightConfig);
-PerceptionComponent->SetDominantSense(USightSense::StaticClass());
-```
-
-当感知到玩家时，触发OnTargetPerceptionUpdated回调：
-
-```cpp
-void ARPGEnemyAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)
-{
-    if (Stimulus.WasSuccessfullySensed() && Actor->ActorHasTag(TEXT("Player")))
-    {
-        // 将玩家写入黑板
-        BlackboardComp->SetValueAsObject(TEXT("TargetActor"), Actor);
-        BlackboardComp->SetValueAsVector(TEXT("TargetLocation"), Actor->GetActorLocation());
+```mermaid
+classDiagram
+    class UPawnCombatComponent {
+        +RegisterSpawnWeapon(Tag, Weapon, bEquipped)
+        +GetCharacterCarriedWeaponByTag(Tag) ARPGWeaponBase*
+        +GetCharacterCurrentEquippedWeapon() ARPGWeaponBase*
+        +ToggleWeaponCollision(bEnable, Type)
+        +OnHitTargetActor(HitActor)
+        +OnWeaponPullerFromTargetActor(Actor)
+        +CurrentEquippedWeaponTag FGameplayTag
+        #OverlappedActors TArray
+        -CharacterCarriedWeaponMap TMap
     }
-}
+    
+    class UPlayerCombatComponent {
+        +GetPlayerCurrentEquippedWeapon() ARPGPlayerWeapon*
+        +GetPlayerCurrentEquippedWeaponDamageAtLevel(Level) float
+        +GetComboCount(ComboType) int32
+        +SetComboCount(ComboType, Count)
+        +ResetComboCount(ComboType)
+        +AdvanceComboCount(ComboType, MaxCount)
+        +SwitchComboType(NewType)
+        +StartComboWindowTimer(Type, WindowTime)
+        +GetCurrentComboType() ERPGComboType
+        -ComboCounts TMap~ERPGComboType int32~
+        -ComboResetTimers TMap~ERPGComboType FTimerHandle~
+        -CurrentComboType ERPGComboType
+    }
+    
+    class UEnemyCombatComponent {
+        +OnHitTargetActor(HitActor)
+        +OnWeaponPullerFromTargetActor(Actor)
+    }
+    
+    UPawnCombatComponent <|-- UPlayerCombatComponent
+    UPawnCombatComponent <|-- UEnemyCombatComponent
 ```
 
-行为树通过读取黑板数据执行相应的行为。当TargetActor有效时，执行追逐和攻击行为。当TargetActor无效时，执行巡逻行为。
+**图3.9 战斗系统类图**
+
+战斗系统的连招管理采用分通道设计，通过ERPGComboType枚举（LightAttack/HeavyAttack）区分攻击类型。每个通道维护独立的连招计数和定时器。当玩家切换攻击类型时，SwitchComboType方法重置对方通道的计数器。连招窗口通过定时器控制，窗口关闭后自动重置连招计数。
+
+## 3.10 武器系统模块概要设计
+
+武器系统模块负责管理武器实体的创建、碰撞检测和能力授予。武器采用Actor架构，支持挂载到角色骨骼插槽。
+
+### 3.10.1 武器系统架构
+
+```mermaid
+classDiagram
+    class ARPGWeaponBase {
+        +OnWeaponHitTarget FOnTargetInteractDelegate
+        +OnWeaponPulledFromTarget FOnTargetInteractDelegate
+        +GetWeaponCollisionBox() UBoxComponent*
+        #WeaponMesh UStaticMeshComponent*
+        #WeaponCollisionBox UBoxComponent*
+        #OnCollisionBoxBeginOverlap(...)
+        #OnCollisionBoxEndOverlap(...)
+    }
+    
+    class ARPGPlayerWeapon {
+        +PlayerWeaponData FRPGPlayerWeaponData
+        +AssignGrantedAbilitySpecHandles(Handles)
+        +GetGrantAbilitySpecHandles() TArray
+        -GrantAbilitySpecHandles TArray
+    }
+    
+    class ARPGEnemyWeapon {
+    }
+    
+    class FRPGPlayerWeaponData {
+        +WeaponAnimLayerToLink TSubclassOf
+        +EquipWeaponMontage UAnimMontage*
+        +UnequipWeaponMontage UAnimMontage*
+        +WeaponInputMappingContext UInputMappingContext*
+        +DefaultWeaponAbilities TArray~FRPGPlayerAbilitySet~
+        +WeaponBaseDamage FScalableFloat
+        +SoftWeaponIconTexture TSoftObjectPtr
+    }
+    
+    ARPGWeaponBase <|-- ARPGPlayerWeapon
+    ARPGWeaponBase <|-- ARPGEnemyWeapon
+    ARPGPlayerWeapon *-- FRPGPlayerWeaponData
+```
+
+**图3.10 武器系统类图**
+
+FRPGPlayerWeaponData结构封装了武器的完整配置：WeaponAnimLayerToLink指定武器对应的动画层类、EquipWeaponMontage/UnequipWeaponMontage定义装卸动画、WeaponInputMappingContext提供武器专属输入映射、DefaultWeaponAbilities定义武器授予的能力集合、WeaponBaseDamage提供可缩放的基础伤害值。
+
+## 3.11 能力系统模块概要设计
+
+能力系统模块基于UE5的Gameplay Ability System（GAS）实现，提供属性管理、能力授予/激活、GameplayEffect应用等功能。
+
+### 3.11.1 能力系统架构
+
+```mermaid
+classDiagram
+    class URPGAbilitySystemComponent {
+        +OnAbilityInputPressed(InputTag)
+        +OnAbilityInputReleased(InputTag)
+        +GrantPlayerWeaponAbility(AbilitySet, Level, OutHandles)
+        +RemovedGrantPlayerWeaponAbility(Handles)
+        +TryActivateAbilityByTag(Tag) bool
+    }
+    
+    class URPGAttributeSet {
+        +Strength FGameplayAttributeData
+        +Intelligence FGameplayAttributeData
+        +Vitality FGameplayAttributeData
+        +Agility FGameplayAttributeData
+        +Armor FGameplayAttributeData
+        +CriticalHitChance FGameplayAttributeData
+        +CriticalHitDamage FGameplayAttributeData
+        +CurrentHealth FGameplayAttributeData
+        +MaxHealth FGameplayAttributeData
+        +CurrentRage FGameplayAttributeData
+        +MaxRage FGameplayAttributeData
+        +CurrentMana FGameplayAttributeData
+        +MaxMana FGameplayAttributeData
+        +DamageTaken FGameplayAttributeData
+        +IncomingXP FGameplayAttributeData
+        +PreAttributeChange(Attribute, NewValue)
+        +PostGameplayEffectExecute(Data)
+    }
+    
+    class URPGGameplayAbility {
+        +GetPawnCombatComponentFromActorInfo()
+        +GetRPGAbilitySystemComponentFromActorInfo()
+        +NativeApplyEffectSpecHandleToTarget(Target, Handle)
+        #AbilityActivationPolicy ERPGAbilityActivationPolicy
+    }
+    
+    class URPGEnemyGameplayAbility {
+        +GetEnemyCharacterFromActorInfo()
+        +GetEnemyCombatComponentFromActorInfo()
+    }
+    
+    URPGGameplayAbility <|-- URPGEnemyGameplayAbility
+```
+
+**图3.11 能力系统类图**
+
+URPGAttributeSet定义四类属性：主属性（力量、智力、体质、敏捷）影响角色基础能力；次属性（护甲、暴击率、暴击伤害、生命回复、法力回复）由主属性派生；核心属性（当前/最大生命值、怒气值、法力值）管理角色资源；元属性（受到伤害、获得经验、攻击力、防御力）用于临时计算。所有核心属性支持网络复制（ReplicatedUsing）。
+
+## 3.12 数据资产模块概要设计
+
+数据资产模块采用UDataAsset实现数据驱动设计，将角色属性、输入配置、启动能力等运行时数据从代码中分离，支持编辑器内配置和热更新。
+
+### 3.12.1 数据资产体系
+
+```mermaid
+classDiagram
+    class UDataAsset_InputConfig {
+        +DefaultMappingContext UInputMappingContext*
+        +NativeInputActions TArray~FRPGInputActionConfig~
+        +AbilityInputActions TArray~FRPGInputActionConfig~
+        +FindNativeInputActionByTag(Tag) UInputAction*
+    }
+    
+    class UDataAsset_CharacterConfig {
+        +CharacterName FName
+        +CharacterClass ERPGCharacterClass
+        +BaseAttributes FCharacterBaseAttributes
+        +ApplyAttributesToASC(ASC, Level)
+    }
+    
+    class UDataAsset_EnemyConfig {
+        +EnemyName FName
+        +EnemyType EEnemyType
+        +BaseAttributes FEnemyBaseAttributes
+        +ApplyAttributesToASC(ASC, Level)
+    }
+    
+    class UDataAsset_StartUpDataBase {
+        +GiveToAbilitySystemComponent(ASC, Level)
+        #ActiveOnGivenAbilities TArray
+        #ReactiveAbilities TArray
+        #StartUpGameplayEffect TArray
+    }
+    
+    class UDataAsset_PlayerStartUpData {
+        +GiveToAbilitySystemComponent(ASC, Level)
+        -PlayerStartUpAbilitySet TArray~FRPGPlayerAbilitySet~
+    }
+    
+    class UDataAsset_EnemyStartUpData {
+    }
+    
+    UDataAsset_StartUpDataBase <|-- UDataAsset_PlayerStartUpData
+    UDataAsset_StartUpDataBase <|-- UDataAsset_EnemyStartUpData
+```
+
+**图3.12 数据资产类图**
+
+FCharacterBaseAttributes结构包含主属性（Strength/Intelligence/Vitality/Agility）、次属性（Armor/CriticalHitChance/CriticalHitDamage/HealthRegeneration/ManaRegeneration）和核心属性（MaxHealth/MaxRage/MaxMana/AttackPower/DefensePower）。FEnemyBaseAttributes针对敌人简化设计，包含核心资源（MaxHealth）、战斗属性（AttackPower/DefensePower）、抗性系统（Armor/MagicResistance/StaggerResistance/PoisonResistance/BleedResistance）和掉落配置（GoldDrop/EXPDrop）。

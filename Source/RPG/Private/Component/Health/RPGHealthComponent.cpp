@@ -121,6 +121,21 @@ void URPGHealthComponent::StartDeath()
 	
 	UE_LOG(LogRPGHealthComponent, Log, TEXT("StartDeath: %s"), *GetOwner()->GetName());
 
+	// 通知 Owner 开始死亡（通过接口）
+	if (AActor* Owner = GetOwner())
+	{
+		if (IPawnDeathInterface* DeathInterface = Cast<IPawnDeathInterface>(Owner))
+		{
+			DeathInterface->Execute_OnDeathStarted(Owner);
+			UE_LOG(LogRPGHealthComponent, Log, TEXT("Notified Owner via IPawnDeathInterface::OnDeathStarted()"));
+		}
+		else
+		{
+			UE_LOG(LogRPGHealthComponent, Warning, TEXT("Owner %s does not implement IPawnDeathInterface"), *Owner->GetName());
+		}
+	}
+
+	// 广播死亡开始事件（供 UI 等系统订阅）
 	OnDeathStarted.Broadcast();
 
 	// 延迟后完成死亡（给动画时间）
@@ -136,5 +151,16 @@ void URPGHealthComponent::FinishDeath()
 {
 	UE_LOG(LogRPGHealthComponent, Log, TEXT("FinishDeath: %s"), *GetOwner()->GetName());
 
+	// 通知 Owner 死亡完成（通过接口）
+	if (AActor* Owner = GetOwner())
+	{
+		if (IPawnDeathInterface* DeathInterface = Cast<IPawnDeathInterface>(Owner))
+		{
+			DeathInterface->Execute_OnDeathFinished(Owner);
+			UE_LOG(LogRPGHealthComponent, Log, TEXT("Notified Owner via IPawnDeathInterface::OnDeathFinished()"));
+		}
+	}
+
+	// 广播死亡完成事件
 	OnDeathFinished.Broadcast();
 }

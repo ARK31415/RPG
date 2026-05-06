@@ -4,19 +4,15 @@
 
 本课题基于Unreal Engine 5.6引擎开发第三人称角色扮演游戏，系统采用组件化架构（Component-Based Architecture）与事件驱动通信机制，实现高内聚低耦合的模块化设计。系统总体架构分为五个层次：表现层（Presentation Layer）、控制层（Control Layer）、逻辑层（Logic Layer）、数据层（Data Layer）和基础设施层（Infrastructure Layer）。
 
-系统总体架构如图4.1所示。在游戏启动并初始化各层级组件后，表现层负责渲染游戏画面、播放动画效果、显示UI界面。控制层作为系统的中枢，负责接收玩家输入、协调各模块之间的工作流和信息传递。逻辑层实现游戏核心业务逻辑，包括健康系统、UI桥接层、动画系统和能力系统。数据层管理游戏状态数据、玩家属性和游戏模式配置。基础设施层提供底层支撑服务，包括UI管理器、导航系统、输入系统和AI感知系统。
+系统总体架构如图4.1所示。在游戏启动并初始化各层级组件后，表现层负责渲染游戏画面、播放动画效果、显示UI界面。控制层作为系统的中枢，负责接收玩家输入、协调各模块之间的工作流和信息传递。逻辑层实现游戏核心业务逻辑，包括健康系统、战斗系统、武器系统、UI桥接层、动画系统和能力系统。数据层管理游戏状态数据、玩家属性、角色配置和游戏模式。基础设施层提供底层支撑服务，包括UI管理器、导航系统、输入系统和AI感知系统。
 
-在角色控制模块中，控制层接收玩家的输入指令（如移动、跳跃、攻击），并将这些指令传递给逻辑层的相应组件进行处理。输入系统通过Enhanced Input框架将原始输入信号转换为游戏逻辑可用的输入动作，支持输入死区配置、输入优先级管理和输入防抖功能。当玩家按下移动键时，输入系统将移动向量传递给PlayerController，PlayerController再调用Character的移动组件执行角色移动逻辑。
+在角色系统中，ABaseCharacter作为所有角色的基类，实现IAbilitySystemInterface、IPawnCombatInterface、IPawnUIInterface和IPawnDeathInterface四个接口，提供AbilitySystemComponent、AttributeSet、HealthComponent和MotionWarpingComponent四大核心引用。ARPGPlayerCharacter继承自ABaseCharacter，添加相机系统（CameraBoom/FollowCamera）、输入配置（DataAsset_InputConfig）、角色配置（DataAsset_CharacterConfig）、土狼时间跳跃系统（CoyoteTime）、平滑转向控制和战斗组件（PlayerCombatComponent/PlayerUIComponent）。ARPGEnemyCharacter同样继承自ABaseCharacter，持有独立的RPGAbilitySystemComponent和RPGAttributeSet（不通过PlayerState），添加行为树管理、敌人配置、启动数据和战斗组件（EnemyCombatComponent/EnemyUIComponent）。
 
-健康系统模块负责管理角色的生命值、死亡状态、复活逻辑等健康相关数据。该系统采用分层继承架构，URPGHealthComponent作为基类提供通用的健康数据管理功能，URPGPlayerHealthComponent和URPGEnemyHealthComponent分别实现玩家和敌人特有的健康逻辑。健康系统通过动态多播委托（Dynamic Multicast Delegate）广播状态变化事件，当角色受到伤害时，HealthComponent更新生命值并触发OnHealthChanged委托，所有订阅该委托的组件（如UIComponent）都会收到通知并执行相应逻辑。
+在能力系统中，玩家的ASC和AttributeSet由ARPGPlayerState持有（保证网络复制和数据持久化），敌人的ASC和AttributeSet由ARPGEnemyCharacter自身持有（无需持久化）。这种差异化设计既满足了网络同步需求，又避免了不必要的复杂度。玩家通过PossessedBy和OnRep_PlayerState两条路径初始化ASC的ActorInfo，确保服务端和客户端都能正确设置能力系统。
 
-UI系统模块采用CommonUI框架和四层栈架构，通过URPGUIManagerSubsystem统一管理UI生命周期。当游戏开始时，PlayerController在BeginPlay方法中调用ShowHUD方法，UIManager创建URPGHUDWidget实例并推送到Game层。HUDWidget通过URPGPlayerUIComponent订阅健康系统的委托事件，当收到健康变化通知时，自动更新HealthBar进度条和HealthText文本显示。这种三层分离架构（数据组件→UI组件→UI Widget）实现了高内聚低耦合的设计目标。
+战斗系统通过PawnCombatComponent管理武器注册和碰撞检测。当武器碰撞盒检测到重叠时，通过FOnTargetInteractDelegate委托通知CombatComponent，CombatComponent的OnHitTargetActor方法处理命中逻辑（维护OverlappedActors避免重复命中）。PlayerCombatComponent扩展了连招管理系统，通过ERPGComboType分通道管理轻击和重击的连招计数，连招窗口通过定时器控制自动过期重置。
 
-动画系统模块通过Animation Blueprint实现动画逻辑，通过AnimInstance类提供动画数据接口。动画模块读取角色的移动速度、方向、状态等属性，驱动动画状态机的状态转换。当角色从Idle状态切换到Walk状态时，State Machine根据移动速度阈值判断转换条件，通过2D BlendSpace实现移动方向的动画混合。动画模块通过根运动（Root Motion）同步机制确保动画播放与角色物理移动的一致性，避免滑步现象。
-
-AI模块采用行为树（Behavior Tree）和黑板（Blackboard）架构，通过ARPGEnemyAIController控制AI行为逻辑。当玩家进入AI感知范围时，AIPerceptionComponent触发OnTargetPerceptionUpdated回调，将玩家位置写入黑板。行为树读取黑板数据执行相应的行为节点，如MoveTo节点实现寻路，Attack节点执行攻击。AI模块通过URPGEnemyHealthComponent获取敌人健康状态，当血量过低时触发逃跑行为。
-
-在游戏运行过程中，各模块通过事件驱动机制实现松耦合通信。当玩家受到伤害时，健康系统广播事件，UI系统更新显示，动画系统播放受击动画，AI系统调整行为策略。这种事件驱动架构避免了模块间的直接引用，提升了系统的可维护性和可扩展性。游戏结束时，系统会回收资源并进行状态清理，释放内存并重置各组件状态，为下一局游戏做好准备。
+UI系统通过三层委托链实现数据到表现的传递：HealthComponent.OnHealthChanged → PawnUIComponent.OnHealthChangedDynamic → PawnUIComponent.OnHealthChangedForUI → HUDWidget.OnHealthChangedDynamic → UpdateHealth。这种链式订阅实现了完全的层间解耦，任何中间层的替换不影响其他层的工作。
 
 ## 4.2 健康系统模块详细设计
 
@@ -24,38 +20,24 @@ AI模块采用行为树（Behavior Tree）和黑板（Blackboard）架构，通�
 
 健康系统模块负责管理角色的生命值、死亡状态、复活逻辑等健康相关数据。该系统采用分层继承架构与观察者模式，通过动态多播委托实现事件广播，支持UI组件和其他模块订阅健康状态变化。
 
-健康系统的核心组件包括URPGHealthComponent（健康基类）、URPGPlayerHealthComponent（玩家健康组件）和URPGEnemyHealthComponent（敌人健康组件）。URPGHealthComponent继承自UPawnExtensionComponentBase，提供通用的健康数据管理功能，包括获取当前生命值、获取最大生命值、判断是否死亡、计算生命值百分比等。该组件通过InitializeWithAbilitySystem方法与Ability System Component（ASC）绑定，监听ASC的健康属性变化。
+健康系统的核心组件包括URPGHealthComponent（健康基类）、URPGPlayerHealthComponent（玩家健康组件）和URPGEnemyHealthComponent（敌人健康组件）。URPGHealthComponent继承自UPawnExtensionComponentBase，提供通用的健康数据管理功能。该组件通过InitializeWithAbilitySystem方法与Ability System Component（ASC）绑定，使用ASC的GetGameplayAttributeValueChangeDelegate方法监听CurrentHealth和MaxHealth属性的变化，将ASC的FOnAttributeChangeData回调转换为自定义的动态多播委托广播。
 
-当ASC的健康属性发生变化时，触发OnHealthAttributeChanged回调，URPGHealthComponent更新CurrentHealth和MaxHealth属性，并通过OnHealthChanged委托广播健康变化事件。委托采用DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams宏声明，支持蓝图订阅。委托回调函数必须标记为UFUNCTION()，否则会导致编译错误。
+当ASC的健康属性发生变化时，触发OnHealthAttributeChanged回调，URPGHealthComponent更新内部缓存的CurrentHealth值，并通过OnHealthChanged委托广播事件（参数为NewHealth和OldHealth）。委托采用DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams宏声明，支持蓝图订阅和C++ AddUniqueDynamic绑定。当CurrentHealth降至0以下且bIsDead为false时，调用StartDeath方法进入死亡状态机。
 
-URPGPlayerHealthComponent继承自URPGHealthComponent，添加玩家特有的功能，包括复活机制和无敌状态控制。复活机制通过Revive方法实现，将CurrentHealth设置为MaxHealth的一定比例（如50%），将bIsDead设置为false，触发OnHealthChanged委托更新UI显示。无敌状态通过SetInvincible和IsInvincible方法实现，无敌状态下玩家不受伤害，健康属性变化被忽略，用于实现无敌帧（Invincibility Frames）机制。
+URPGPlayerHealthComponent继承自URPGHealthComponent，添加无敌状态控制（bIsInvincible/InvincibleDuration）和复活机制（Revive方法，接受HealthPercent参数指定复活时恢复的生命比例）。StartDeath和FinishDeath方法重写实现玩家特有的死亡逻辑。
 
-URPGEnemyHealthComponent继承自URPGHealthComponent，添加敌人特有的功能，包括死亡动画触发和掉落物生成。在FinishDeath方法中播放敌人死亡动画，死亡动画通过动画蒙太奇实现，支持不同的死亡类型。掉落物的类型和数量通过配置表定义，支持随机掉落概率。
-
-健康系统与UIComponent之间采用观察者模式通信。UIComponent订阅HealthComponent的委托事件，而非继承关系。当健康状态变化时，HealthComponent广播事件，UIComponent收到通知后更新UI显示。这种设计实现了数据层与表现层的解耦，提升了系统的可维护性。
+URPGEnemyHealthComponent继承自URPGHealthComponent，添加死亡动画控制（bPlayDeathAnimation/DeathAnimationDuration）和自动销毁配置（bDestroyOnDeath/DestroyDelay）。敌人死亡时可选择是否播放死亡动画，并在延迟后自动销毁Actor。
 
 ### 4.2.2 健康系统类图
 
-健康系统详细类图如图4.2所示。
-
 ```mermaid
 classDiagram
-    class UActorComponent {
-        <<UE Engine>>
-        +BeginPlay()
-        +EndPlay(EndPlayReason)
-        +GetOwner() AActor*
-    }
-    
     class UPawnExtensionComponentBase {
-        <<RPG Base>>
-        +GetPawnOwner() APawn*
-        #NativeBeginPlay()
+        #GetOwningPawn~T~() T*
+        #GetOwningController~T~() T*
     }
     
     class URPGHealthComponent {
-        <<Health Base>>
-        +URPGHealthComponent()
         +InitializeWithAbilitySystem(ASC) void
         +GetCurrentHealth() float
         +GetMaxHealth() float
@@ -65,13 +47,11 @@ classDiagram
         +OnMaxHealthChanged FOnMaxHealthChangedDelegate
         +OnDeathStarted FOnDeathStartedDelegate
         +OnDeathFinished FOnDeathFinishedDelegate
-        #BeginPlay() void
-        #EndPlay(EndPlayReason) void
         #OnHealthAttributeChanged(Data) void
         #OnMaxHealthAttributeChanged(Data) void
         #StartDeath() void
         #FinishDeath() void
-        #AbilitySystemComponent UAbilitySystemComponent*
+        #AbilitySystemComponent TObjectPtr
         #HealthChangedDelegateHandle FDelegateHandle
         #MaxHealthChangedDelegateHandle FDelegateHandle
         #CurrentHealth float
@@ -81,144 +61,67 @@ classDiagram
     }
     
     class URPGPlayerHealthComponent {
-        <<Player Health>>
-        +Revive() void
+        +SetInvincible(bInvincible) void
         +IsInvincible() bool
-        +SetInvincible(bool) void
+        +Revive(HealthPercent) void
+        #StartDeath() void
+        #FinishDeath() void
         -bIsInvincible bool
-        -InvincibilityDuration float
+        -InvincibleDuration float
     }
     
     class URPGEnemyHealthComponent {
-        <<Enemy Health>>
+        +SetPlayDeathAnimation(bPlayAnim) void
+        +ShouldPlayDeathAnimation() bool
+        #StartDeath() void
         #FinishDeath() void
-        #SpawnDropItems() void
-        #PlayDeathAnimation() void
-        -DropTable UDataTable*
-        -DeathAnimation UAnimMontage*
+        -bPlayDeathAnimation bool
+        -DeathAnimationDuration float
+        -bDestroyOnDeath bool
+        -DestroyDelay float
     }
     
-    class FOnHealthChangedDelegate {
-        <<Delegate>>
-        +Execute(NewHealth, OldHealth)
-    }
-    
-    class FOnMaxHealthChangedDelegate {
-        <<Delegate>>
-        +Execute(NewMaxHealth, OldMaxHealth)
-    }
-    
-    class FOnDeathStartedDelegate {
-        <<Delegate>>
-        +Execute()
-    }
-    
-    class FOnDeathFinishedDelegate {
-        <<Delegate>>
-        +Execute()
-    }
-    
-    UActorComponent <|-- UPawnExtensionComponentBase
     UPawnExtensionComponentBase <|-- URPGHealthComponent
     URPGHealthComponent <|-- URPGPlayerHealthComponent
     URPGHealthComponent <|-- URPGEnemyHealthComponent
-    URPGHealthComponent *-- FOnHealthChangedDelegate
-    URPGHealthComponent *-- FOnMaxHealthChangedDelegate
-    URPGHealthComponent *-- FOnDeathStartedDelegate
-    URPGHealthComponent *-- FOnDeathFinishedDelegate
 ```
 
 **图4.1 健康系统详细类图**
 
-### 4.2.3 健康组件初始化流程
-
-健康组件初始化流程如图4.3所示。
+### 4.2.3 健康变化事件广播时序图
 
 ```mermaid
 sequenceDiagram
-    participant Char as RPGPlayerCharacter
-    participant Health as URPGPlayerHealthComponent
-    participant ASC as UAbilitySystemComponent
-    participant AttributeSet as URPGAttributeSet
-    
-    Char->>Char: BeginPlay()
-    Char->>Health: InitializeWithAbilitySystem(ASC)
-    Health->>ASC: GetGameplayAttributeValueChangeDelegate(Health)
-    ASC-->>Health: FOnAttributeValueChanged Delegate
-    Health->>Health: AddUObject(OnHealthAttributeChanged)
-    Health->>ASC: GetGameplayAttributeValueChangeDelegate(MaxHealth)
-    ASC-->>Health: FOnAttributeValueChanged Delegate
-    Health->>Health: AddUObject(OnMaxHealthAttributeChanged)
-    Health->>ASC: GetAttributeValue(Health)
-    ASC-->>Health: CurrentHealth Value
-    Health->>Health: Store CurrentHealth
-    Health->>ASC: GetAttributeValue(MaxHealth)
-    ASC-->>Health: MaxHealth Value
-    Health->>Health: Store MaxHealth
-    Health-->>Char: Initialization Complete
-```
-
-**图4.2 健康组件初始化时序图**
-
-### 4.2.4 健康变化事件广播流程
-
-健康变化事件广播流程如图4.4所示。
-
-```mermaid
-sequenceDiagram
-    participant ASC as AbilitySystemComponent
+    participant ASC as URPGAbilitySystemComponent
     participant Health as URPGHealthComponent
-    participant UI as URPGPlayerUIComponent
+    participant PUI as UPawnUIComponent
     participant HUD as URPGHUDWidget
-    participant HealthBar as UProgressBar
     
-    ASC->>ASC: ModifyAttribute(Health, -10.0f)
-    ASC->>Health: OnHealthAttributeChanged(Data)
-    Health->>Health: Update CurrentHealth
+    ASC->>ASC: PostGameplayEffectExecute修改CurrentHealth
+    ASC->>Health: OnHealthAttributeChanged(FOnAttributeChangeData)
+    Health->>Health: OldHealth = CurrentHealth
+    Health->>Health: CurrentHealth = Data.NewValue
     Health->>Health: OnHealthChanged.Broadcast(NewHealth, OldHealth)
-    Health->>UI: OnHealthChanged Callback
-    UI->>UI: Process Health Data
-    UI->>UI: OnHealthChangedForUI.Broadcast(NewHealth, OldHealth)
-    UI->>HUD: OnHealthChangedForUI Callback
+    Health->>PUI: OnHealthChangedDynamic(NewHealth, OldHealth)
+    PUI->>PUI: OnHealthChangedInternal(NewHealth, OldHealth)
+    PUI->>PUI: OnHealthChangedForUI.Broadcast(NewHealth, OldHealth)
+    PUI->>HUD: OnHealthChangedDynamic(NewHealth, OldHealth)
     HUD->>HUD: UpdateHealth(NewHealth, MaxHealth)
-    HUD->>HealthBar: SetPercent(HealthPercent)
-    HUD->>HealthText: SetText("CurrentHealth / MaxHealth")
+    HUD->>HUD: HealthBar->SetPercent(NewHealth/MaxHealth)
+    HUD->>HUD: HealthText->SetText(...)
+    alt CurrentHealth <= 0 且 !bIsDead
+        Health->>Health: StartDeath()
+        Health->>Health: bIsDead = true
+        Health->>Health: OnDeathStarted.Broadcast()
+        Health->>Health: 通过IPawnDeathInterface通知Character
+    end
 ```
 
-**图4.3 健康变化事件广播时序图**
+**图4.2 健康变化事件广播时序图**
 
-### 4.2.5 死亡流程设计
+### 4.2.4 核心代码实现
 
-死亡流程设计如图4.5所示。
-
-```mermaid
-sequenceDiagram
-    participant Health as URPGHealthComponent
-    participant Anim as AnimInstance
-    participant UI as URPGPlayerUIComponent
-    participant HUD as URPGHUDWidget
-    participant Controller as RPGPlayerController
-    
-    Health->>Health: OnHealthAttributeChanged(Health <= 0)
-    Health->>Health: bIsDead = true
-    Health->>Health: StartDeath()
-    Health->>UI: OnDeathStarted.Broadcast()
-    Health->>Anim: PlayDeathAnimation()
-    Anim-->>Anim: Death Montage Playing
-    Health->>Health: SetTimer(DeathFinishTimer)
-    Note over Health: Wait for Death Animation
-    Health->>Health: FinishDeath()
-    Health->>UI: OnDeathFinished.Broadcast()
-    UI->>HUD: Hide HUD or Show Death Screen
-    Health->>Controller: Disable Input
-    Controller->>Controller: Show Respawn Menu
-```
-
-**图4.4 死亡流程时序图**
-
-### 4.2.6 核心代码实现
-
-URPGHealthComponent的委托声明与绑定：
+委托声明：
 
 ```cpp
 // RPGHealthComponent.h
@@ -226,91 +129,17 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthChangedDelegate, float, Ne
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMaxHealthChangedDelegate, float, NewMaxHealth, float, OldMaxHealth);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeathStartedDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeathFinishedDelegate);
-
-class RPG_API URPGHealthComponent : public UPawnExtensionComponentBase
-{
-    GENERATED_BODY()
-
-public:
-    UPROPERTY(BlueprintAssignable, Category="Health|Events")
-    FOnHealthChangedDelegate OnHealthChanged;
-    
-    UPROPERTY(BlueprintAssignable, Category="Health|Events")
-    FOnMaxHealthChangedDelegate OnMaxHealthChanged;
-    
-    UPROPERTY(BlueprintAssignable, Category="Health|Events")
-    FOnDeathStartedDelegate OnDeathStarted;
-    
-    UPROPERTY(BlueprintAssignable, Category="Health|Events")
-    FOnDeathFinishedDelegate OnDeathFinished;
-
-    UFUNCTION(BlueprintCallable, Category="Health")
-    virtual void InitializeWithAbilitySystem(UAbilitySystemComponent* ASC);
-
-protected:
-    virtual void OnHealthAttributeChanged(const FOnAttributeChangeData& Data);
-    virtual void OnMaxHealthAttributeChanged(const FOnAttributeChangeData& Data);
-    virtual void StartDeath();
-    virtual void FinishDeath();
-
-private:
-    UPROPERTY()
-    UAbilitySystemComponent* AbilitySystemComponent;
-    
-    FDelegateHandle HealthChangedDelegateHandle;
-    FDelegateHandle MaxHealthChangedDelegateHandle;
-    
-    float CurrentHealth;
-    float MaxHealth;
-    bool bIsDead;
-    
-    FTimerHandle DeathFinishTimerHandle;
-};
 ```
 
-URPGHealthComponent的初始化实现：
-
-```cpp
-// RPGHealthComponent.cpp
-void URPGHealthComponent::InitializeWithAbilitySystem(UAbilitySystemComponent* ASC)
-{
-    if (!ASC)
-    {
-        UE_LOG(LogTemp, Error, TEXT("URPGHealthComponent::InitializeWithAbilitySystem - ASC is null"));
-        return;
-    }
-    
-    AbilitySystemComponent = ASC;
-    
-    // 监听健康属性变化
-    FGameplayAttribute HealthAttribute = UAbilitySystemBlueprintLibrary::MakeAttributeFromName(TEXT("Health"));
-    HealthChangedDelegateHandle = ASC->GetGameplayAttributeValueChangeDelegate(HealthAttribute)
-        .AddUObject(this, &URPGHealthComponent::OnHealthAttributeChanged);
-    
-    // 监听最大健康属性变化
-    FGameplayAttribute MaxHealthAttribute = UAbilitySystemBlueprintLibrary::MakeAttributeFromName(TEXT("MaxHealth"));
-    MaxHealthChangedDelegateHandle = ASC->GetGameplayAttributeValueChangeDelegate(MaxHealthAttribute)
-        .AddUObject(this, &URPGHealthComponent::OnMaxHealthAttributeChanged);
-    
-    // 初始化当前值
-    CurrentHealth = ASC->GetNumericAttribute(HealthAttribute);
-    MaxHealth = ASC->GetNumericAttribute(MaxHealthAttribute);
-    bIsDead = false;
-}
-```
-
-属性变化回调实现：
+属性变化回调：
 
 ```cpp
 void URPGHealthComponent::OnHealthAttributeChanged(const FOnAttributeChangeData& Data)
 {
     float OldHealth = CurrentHealth;
     CurrentHealth = Data.NewValue;
-    
-    // 广播健康变化事件
     OnHealthChanged.Broadcast(CurrentHealth, OldHealth);
     
-    // 检查是否死亡
     if (CurrentHealth <= 0.0f && !bIsDead)
     {
         StartDeath();
@@ -318,1118 +147,1180 @@ void URPGHealthComponent::OnHealthAttributeChanged(const FOnAttributeChangeData&
 }
 ```
 
-死亡流程实现：
-
-```cpp
-void URPGHealthComponent::StartDeath()
-{
-    if (bIsDead)
-    {
-        return;
-    }
-    
-    bIsDead = true;
-    
-    // 广播死亡开始事件
-    OnDeathStarted.Broadcast();
-    
-    // 播放死亡动画（由子类实现）
-    APawn* PawnOwner = GetPawnOwner();
-    if (PawnOwner)
-    {
-        UAnimInstance* AnimInstance = PawnOwner->GetAnimInstance();
-        if (AnimInstance)
-        {
-            // 触发死亡动画
-            AnimInstance->Montage_Play(DeathAnimation);
-        }
-    }
-    
-    // 设置定时器，在动画结束后完成死亡
-    float DeathAnimationDuration = DeathAnimation ? DeathAnimation->GetPlayLength() : 2.0f;
-    GetWorld()->GetTimerManager().SetTimer(
-        DeathFinishTimerHandle,
-        this,
-        &URPGHealthComponent::FinishDeath,
-        DeathAnimationDuration,
-        false
-    );
-}
-
-void URPGHealthComponent::FinishDeath()
-{
-    // 广播死亡完成事件
-    OnDeathFinished.Broadcast();
-    
-    // 销毁角色或执行其他逻辑（由子类实现）
-    APawn* PawnOwner = GetPawnOwner();
-    if (PawnOwner)
-    {
-        PawnOwner->Destroy();
-    }
-}
-```
-
-URPGPlayerHealthComponent的复活实现：
-
-```cpp
-// RPGPlayerHealthComponent.cpp
-void URPGPlayerHealthComponent::Revive()
-{
-    if (!bIsDead)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Player is not dead, cannot revive"));
-        return;
-    }
-    
-    bIsDead = false;
-    CurrentHealth = MaxHealth * 0.5f;  // 复活时恢复50%生命值
-    
-    // 更新ASC属性
-    if (AbilitySystemComponent)
-    {
-        FGameplayAttribute HealthAttribute = UAbilitySystemBlueprintLibrary::MakeAttributeFromName(TEXT("Health"));
-        AbilitySystemComponent->SetNumericAttributeBase(HealthAttribute, CurrentHealth);
-    }
-    
-    // 广播健康变化事件
-    OnHealthChanged.Broadcast(CurrentHealth, 0.0f);
-}
-```
-
 ## 4.3 UI系统模块详细设计
 
 ### 4.3.1 UI系统架构设计
 
-UI系统模块负责管理游戏的所有UI界面，采用CommonUI框架和四层栈架构，通过URPGUIManagerSubsystem统一管理UI生命周期。UI系统通过URPGPlayerUIComponent作为数据桥接层，实现健康系统与UI Widget的解耦。
+UI系统模块采用CommonUI框架和四层栈架构，通过URPGUIManagerSubsystem统一管理UI生命周期。UI系统通过UPawnUIComponent基类作为数据桥接层，实现健康系统与UI Widget的解耦。
 
-UI系统的核心组件包括URPGUIManagerSubsystem（UI管理器）、URPGHUDWidget（HUD显示）、URPGMainMenuWidget（主菜单）和URPGPlayerUIComponent（玩家UI桥接）。URPGUIManagerSubsystem继承自UGameUIManagerSubsystem，作为GameInstance级全局Subsystem，统一管理四层栈UI的生命周期（创建、激活、停用、销毁）。
+URPGUIManagerSubsystem继承自UGameUIManagerSubsystem，作为GameInstance级全局Subsystem。该系统通过GameplayTag标签管理四层栈：RPGCommonUI_WidgetStack_Modal（模态层，屏蔽下层交互）、RPGCommonUI_WidgetStack_GameMenu（游戏菜单层）、RPGCommonUI_WidgetStack_GameHUD（游戏HUD层，始终显示）、RPGCommonUI_WidgetStack_Frontend（前端层，主菜单等）。提供PushSoftWidgetToStackAsync方法实现Widget的异步加载和推送，支持EAsyncPushWidgetState回调（OnCreatedBeforePush和AfterPush两个阶段）。
 
-四层栈架构包括Game层、Menu层、Modal层和Overlay层。Game层用于显示主游戏界面，如HUD、得分显示、小地图等，始终显示在游戏场景中，为玩家提供核心游戏信息。Menu层用于显示玩家专属的交互界面，如主菜单、设置界面等，仅在玩家触发相关操作时显示。Modal层用于显示模态对话框，如设置菜单、暂停界面、确认对话框等，显示时会屏蔽下层UI的交互。Overlay层用于显示覆盖层，如加载提示、错误提示、成就通知等，通常具有较短的显示时间。
+UPawnUIComponent是UI桥接层基类（Abstract），继承自UPawnExtensionComponentBase。该组件在BeginPlay时通过SubscribeToHealthComponent方法订阅HealthComponent的四个委托事件（OnHealthChanged/OnMaxHealthChanged/OnDeathStarted/OnDeathFinished），在EndPlay时通过UnsubscribeFromHealthComponent解除订阅。委托回调采用UFUNCTION标记的动态委托函数（OnHealthChangedDynamic/OnMaxHealthChangedDynamic/OnDeathStartedDynamic/OnDeathFinishedDynamic），内部调用虚函数（OnHealthChangedInternal等）允许子类重写，最终通过自有委托（OnHealthChangedForUI等）转发给Widget。
 
-URPGHUDWidget是Game层的核心Widget，负责显示玩家的生命值、法力值、武器图标等关键信息。该Widget继承自UCommonActivatableWidget，通过UPROPERTY(BlueprintReadOnly, meta = (BindWidget))标记UI元素，与蓝图Widget绑定。在NativeOnActivated方法中，HUDWidget获取URPGPlayerUIComponent引用，订阅OnHealthChanged、OnManaChanged等委托事件。当收到委托回调时，更新对应的UI元素，如HealthBar进度条、HealthText文本。
+URPGPlayerUIComponent继承UPawnUIComponent，添加法力值管理（FOnManaChangedDelegate OnManaChangedForUI）和武器变化通知（FOnCurrentWeaponChangedDelegate OnCurrentWeaponChangedForUI）。URPGEnemyUIComponent继承UPawnUIComponent，添加血条可见性控制（MaxHealthBarDistance距离检测、bHideHealthBarWhenFull满血隐藏）和显示信息（DisplayName、EnemyLevel）。
 
-URPGPlayerUIComponent作为数据桥接层，订阅URPGHealthComponent的OnHealthChanged委托，将健康数据转换为UI可用的格式。当收到健康变化事件时，触发OnHealthChangedForUI委托，通知HUD Widget更新显示。该组件还管理玩家的法力值数据，通过CurrentMana和MaxMana属性管理法力值，提供UpdateMana方法更新法力值，触发OnManaChangedForUI委托通知HUD Widget。
-
-UI系统通过接口（Interface）和委托（Delegate）实现与数据层的解耦。URPGHUDWidget不直接引用URPGHealthComponent，而是通过URPGPlayerUIComponent获取数据。URPGPlayerUIComponent实现IPawnUIInterface接口，提供健康数据查询方法。通过接口抽象，HUD Widget可以处理任何实现IPawnUIInterface的组件，不依赖具体的组件类型。当需要添加新的UI数据源时，只需实现接口即可，无需修改HUD Widget代码。
-
-在Widget停用时（NativeOnDeactivated），必须清理委托绑定，避免悬空指针和无效回调。清理方法为调用RemoveAll方法移除所有绑定到当前对象的委托回调，并重置PlayerUIComponent引用。这种生命周期管理机制确保了内存安全和避免内存泄漏。
+URPGHUDWidget继承自URPGWidget_ActivatableBase（继承UCommonActivatableWidget），在NativeOnActivated时获取PlayerCharacter的PlayerUIComponent并订阅事件，在NativeOnDeactivated时清理所有委托绑定。Widget通过BindWidget元数据绑定UI元素（HealthBar/ManaBar/HealthText/ManaText/WeaponIcon），提供BP_OnPlayerUIComponentInitialized蓝图实现事件供蓝图扩展。
 
 ### 4.3.2 UI系统类图
-
-UI系统详细类图如图4.6所示。
 
 ```mermaid
 classDiagram
     class UGameUIManagerSubsystem {
-        <<UE Engine>>
-        +CreateWidget(World, WidgetClass) UUserWidget*
+        <<UE CommonGame>>
     }
     
     class URPGUIManagerSubsystem {
-        <<UI Manager>>
-        +ShowHUD(PlayerController) void
-        +ShowMainMenu() void
-        +HideMainMenu() void
-        +PushWidgetToLayerStack(Layer, WidgetClass) void
-        #GetGameInstance() UGameInstance*
+        +Get(WorldContextObject) URPGUIManagerSubsystem*
+        +ShouldCreateSubsystem(Outer) bool
+        +RegisterWidgetLayout_Base(Widget)
+        +PushSoftWidgetToStackAsync(Tag, SoftClass, Callback)
+        +PushToWidgetByTag(Widget, Tag)
+        -CreateWidgetLayout_Base UWidgetLayout_Base*
     }
     
-    class UCommonActivatableWidget {
-        <<CommonUI>>
-        +NativeOnActivated() void
-        +NativeOnDeactivated() void
-        +Initialize() bool
+    class UPawnUIComponent {
+        <<Abstract>>
+        +GetCurrentHealth() float
+        +GetMaxHealth() float
+        +GetHealthPercent() float
+        +IsDead() bool
+        +OnHealthChangedForUI FOnHealthChangedForUIDelegate
+        +OnMaxHealthChangedForUI FOnMaxHealthChangedForUIDelegate
+        +OnDeathStartedForUI FOnDeathStartedForUIDelegate
+        +OnDeathFinishedForUI FOnDeathFinishedForUIDelegate
+        #GetHealthComponentInternal() URPGHealthComponent*
+        #SubscribeToHealthComponent()
+        #UnsubscribeFromHealthComponent()
+        #HealthComponent TObjectPtr
+    }
+    
+    class URPGPlayerUIComponent {
+        +OnManaChangedForUI FOnManaChangedDelegate
+        +OnCurrentWeaponChangedForUI FOnCurrentWeaponChangedDelegate
+        #GetHealthComponentInternal() URPGHealthComponent*
+        -InitializeManaSystem()
+        -CurrentMana float
+        -MaxMana float
+    }
+    
+    class URPGEnemyUIComponent {
+        +ShouldShowHealthBar() bool
+        +GetEnemyDisplayName() FString
+        +GetEnemyLevel() int32
+        -MaxHealthBarDistance float
+        -bHideHealthBarWhenFull bool
+        -DisplayName FString
+        -EnemyLevel int32
     }
     
     class URPGHUDWidget {
-        <<HUD View>>
-        +URPGHUDWidget(ObjectInitializer)
-        +Initialize() bool
-        +NativeOnActivated() void
-        +NativeOnDeactivated() void
-        +OnHealthChangedDynamic(NewHealth, OldHealth) void
-        +OnManaChangedDynamic(NewMana, OldMana) void
-        +UpdateHealth(CurrentHealth, MaxHealth) void
-        +UpdateMana(CurrentMana, MaxMana) void
-        +UpdateWeaponIcon(WeaponIcon) void
-        +BP_OnPlayerUIComponentInitialized(PlayerUI) void
+        +OnHealthChangedDynamic(NewHealth, OldHealth)
+        +OnManaChangedDynamic(NewMana, OldMana)
+        +UpdateHealth(CurrentHealth, MaxHealth)
+        +UpdateMana(CurrentMana, MaxMana)
+        +UpdateWeaponIcon(WeaponIcon)
+        +BP_OnPlayerUIComponentInitialized(PlayerUI)
         #HealthBar UProgressBar*
         #ManaBar UProgressBar*
         #HealthText UTextBlock*
         #ManaText UTextBlock*
         #WeaponIcon UImage*
-        -PlayerUIComponent TWeakObjectPtr~URPGPlayerUIComponent~
-    }
-    
-    class UPawnUIComponent {
-        <<UI Bridge Base>>
-        +GetHealthComponent() URPGHealthComponent*
-        #GetHealthComponentInternal() URPGHealthComponent*
-    }
-    
-    class URPGPlayerUIComponent {
-        <<Player UI Bridge>>
-        +URPGPlayerUIComponent()
-        +OnManaChangedForUI FOnManaChangedDelegate
-        +OnCurrentWeaponChangedForUI FOnCurrentWeaponChangedDelegate
-        #BeginPlay() void
-        #GetHealthComponentInternal() URPGHealthComponent*
-        -InitializeManaSystem() void
-        -CurrentMana float
-        -MaxMana float
-    }
-    
-    class URPGHealthComponent {
-        <<Health Data>>
-        +OnHealthChanged FOnHealthChangedDelegate
-        +GetCurrentHealth() float
-        +GetMaxHealth() float
+        -PlayerUIComponent TWeakObjectPtr
     }
     
     UGameUIManagerSubsystem <|-- URPGUIManagerSubsystem
-    UCommonActivatableWidget <|-- URPGHUDWidget
-    UActorComponent <|-- UPawnUIComponent
     UPawnUIComponent <|-- URPGPlayerUIComponent
+    UPawnUIComponent <|-- URPGEnemyUIComponent
     URPGUIManagerSubsystem --> URPGHUDWidget : 管理生命周期
     URPGHUDWidget --> URPGPlayerUIComponent : 订阅事件
     URPGPlayerUIComponent --> URPGHealthComponent : 订阅事件
 ```
 
-**图4.5 UI系统详细类图**
+**图4.3 UI系统详细类图**
 
-### 4.3.3 HUD显示流程
-
-HUD显示流程如图4.7所示。
-
-```mermaid
-sequenceDiagram
-    participant PC as RPGPlayerController
-    participant GI as GameInstance
-    participant UIS as URPGUIManagerSubsystem
-    participant HUD as URPGHUDWidget
-    participant World as UWorld
-    
-    PC->>PC: BeginPlay()
-    PC->>GI: GetSubsystem~URPGUIManagerSubsystem~()
-    GI-->>PC: UIManager Instance
-    PC->>UIS: ShowHUD(this)
-    UIS->>UIS: GetWorld()
-    UIS->>World: CreateWidget(URPGHUDWidget)
-    World-->>UIS: HUD Widget Instance
-    UIS->>HUD: Initialize()
-    HUD->>HUD: Find UI Components<br/>(HealthBar, ManaBar, etc.)
-    HUD-->>UIS: Initialize Success
-    UIS->>HUD: PushWidgetToLayerStack(GameLayer, HUD)
-    HUD->>HUD: NativeOnActivated()
-    HUD->>PC: GetPlayerState()
-    PC-->>HUD: RPGPlayerState
-    HUD->>HUD: Get PlayerUIComponent<br/>from PlayerState
-    HUD->>HUD: BP_OnPlayerUIComponentInitialized(PlayerUI)
-    HUD->>HUD: Subscribe to PlayerUI Events
-```
-
-**图4.6 HUD显示流程时序图**
-
-### 4.3.4 UI事件订阅流程
-
-UI事件订阅流程如图4.8所示。
+### 4.3.3 UI事件订阅时序图
 
 ```mermaid
 sequenceDiagram
     participant HUD as URPGHUDWidget
-    participant PlayerUI as URPGPlayerUIComponent
+    participant Char as ARPGPlayerCharacter
+    participant PUI as URPGPlayerUIComponent
     participant Health as URPGHealthComponent
-    participant PlayerState as RPGPlayerState
     
     HUD->>HUD: NativeOnActivated()
-    HUD->>PlayerState: GetPlayerUIComponent()
-    PlayerState-->>HUD: URPGPlayerUIComponent*
-    HUD->>HUD: PlayerUIComponent = PlayerUI
-    HUD->>PlayerUI: OnHealthChangedForUI.AddUniqueDynamic(OnHealthChangedDynamic)
-    PlayerUI-->>HUD: Delegate Handle Stored
-    HUD->>PlayerUI: OnManaChangedForUI.AddUniqueDynamic(OnManaChangedDynamic)
-    PlayerUI-->>HUD: Delegate Handle Stored
-    PlayerUI->>Health: OnHealthChanged.AddUniqueDynamic(OnHealthChangedForUI)
-    Health-->>PlayerUI: Delegate Handle Stored
-    Note over HUD,Health: 观察者模式链式订阅完成
+    HUD->>Char: 通过IPawnUIInterface获取PlayerUIComponent
+    Char-->>HUD: URPGPlayerUIComponent*
+    HUD->>HUD: PlayerUIComponent = PUI (TWeakObjectPtr)
+    HUD->>PUI: OnHealthChangedForUI.AddUniqueDynamic(OnHealthChangedDynamic)
+    HUD->>PUI: OnManaChangedForUI.AddUniqueDynamic(OnManaChangedDynamic)
+    HUD->>HUD: BP_OnPlayerUIComponentInitialized(PUI)
+    Note over PUI,Health: PUI在自身BeginPlay时已订阅Health事件
+    PUI->>Health: OnHealthChanged.AddDynamic(OnHealthChangedDynamic)
+    PUI->>Health: OnMaxHealthChanged.AddDynamic(OnMaxHealthChangedDynamic)
+    PUI->>Health: OnDeathStarted.AddDynamic(OnDeathStartedDynamic)
+    PUI->>Health: OnDeathFinished.AddDynamic(OnDeathFinishedDynamic)
 ```
 
-**图4.7 UI事件订阅时序图**
+**图4.4 UI事件订阅时序图**
 
-### 4.3.5 UI事件清理流程
+## 4.4 战斗系统模块详细设计
 
-UI事件清理流程如图4.9所示。
+### 4.4.1 战斗系统架构设计
 
-```mermaid
-sequenceDiagram
-    participant HUD as URPGHUDWidget
-    participant PlayerUI as URPGPlayerUIComponent
-    participant UIManager as URPGUIManagerSubsystem
-    
-    UIManager->>HUD: DeactivateWidget()
-    HUD->>HUD: NativeOnDeactivated()
-    HUD->>PlayerUI: OnHealthChangedForUI.RemoveAll(this)
-    HUD->>PlayerUI: OnManaChangedForUI.RemoveAll(this)
-    HUD->>HUD: Clear PlayerUIComponent Reference
-    HUD-->>UIManager: Deactivation Complete
-    UIManager->>UIManager: Store Widget for Reactivation
-```
+战斗系统模块负责管理角色的武器注册、碰撞检测、连招计数和命中处理。战斗系统采用分层组件架构，UPawnCombatComponent作为基类提供通用武器管理功能，UPlayerCombatComponent添加玩家特有的连招管理系统，UEnemyCombatComponent重写敌人的命中检测逻辑。
 
-**图4.8 UI事件清理时序图**
+UPawnCombatComponent通过CharacterCarriedWeaponMap（TMap<FGameplayTag, ARPGWeaponBase*>）管理角色携带的所有武器，以GameplayTag作为键标识不同武器。RegisterSpawnWeapon方法在武器生成后将其注册到Map中，可选参数bRegisterAsEquippedWeapon同时设置CurrentEquippedWeaponTag。ToggleWeaponCollision方法控制武器碰撞盒的开关，支持三种模式（CurrentEquippedWeapon/LeftHand/RightHand）。OnHitTargetActor和OnWeaponPullerFromTargetActor为虚函数，由子类重写实现差异化的命中和拔出逻辑。OverlappedActors数组用于在一次攻击周期内防止重复命中同一目标。
 
-### 4.3.6 核心代码实现
+UPlayerCombatComponent的连招管理系统通过TMap<ERPGComboType, int32> ComboCounts分通道存储轻击和重击的连招计数。AdvanceComboCount方法递增连招计数并在达到MaxComboCount时循环回0。SwitchComboType方法在攻击类型切换时重置对方通道计数器。StartComboWindowTimer方法启动定时器，在WindowTime过期后调用OnComboWindowTimerExpired重置对应通道的连招计数。GetPlayerCurrentEquippedWeaponDamageAtLevel方法通过FScalableFloat获取当前武器在指定等级的基础伤害值。
 
-URPGUIManagerSubsystem的ShowHUD实现：
-
-```cpp
-// RPGUIManagerSubsystem.cpp
-void URPGUIManagerSubsystem::ShowHUD(APlayerController* PlayerController)
-{
-    if (!PlayerController)
-    {
-        UE_LOG(LogTemp, Error, TEXT("URPGUIManagerSubsystem::ShowHUD - PlayerController is null"));
-        return;
-    }
-    
-    UWorld* World = GetWorld();
-    if (!World)
-    {
-        return;
-    }
-    
-    // 创建HUD Widget
-    TSubclassOf<UCommonActivatableWidget> HUDWidgetClass = LoadClass<UCommonActivatableWidget>(
-        nullptr, 
-        TEXT("/Game/UI/WBP_HUD.WBP_HUD_C")
-    );
-    
-    if (!HUDWidgetClass)
-    {
-        UE_LOG(LogTemp, Error, TEXT("Failed to load HUD Widget class"));
-        return;
-    }
-    
-    // 推送到Game层
-    PushWidgetToLayerStack(EUIStackLayer::Game, HUDWidgetClass, PlayerController);
-}
-```
-
-URPGHUDWidget的初始化和事件订阅：
-
-```cpp
-// RPGHUDWidget.cpp
-bool URPGHUDWidget::Initialize()
-{
-    if (!Super::Initialize())
-    {
-        return false;
-    }
-    
-    // 确保所有BindWidget组件已绑定
-    if (!HealthBar || !ManaBar || !HealthText || !ManaText || !WeaponIcon)
-    {
-        UE_LOG(LogTemp, Error, TEXT("URPGHUDWidget::Initialize - Missing UI components"));
-        return false;
-    }
-    
-    return true;
-}
-
-void URPGHUDWidget::NativeOnActivated()
-{
-    Super::NativeOnActivated();
-    
-    // 获取PlayerUIComponent并订阅事件
-    APlayerController* PC = GetOwningPlayer();
-    if (PC && PC->GetPlayerState<ARPGPlayerState>())
-    {
-        ARPGPlayerState* PlayerState = PC->GetPlayerState<ARPGPlayerState>();
-        URPGPlayerUIComponent* PlayerUI = PlayerState->GetPlayerUIComponent();
-        
-        if (PlayerUI)
-        {
-            PlayerUIComponent = PlayerUI;
-            
-            // 订阅健康变化事件
-            PlayerUI->OnHealthChangedForUI.AddUniqueDynamic(this, &URPGHUDWidget::OnHealthChangedDynamic);
-            
-            // 订阅法力值变化事件
-            PlayerUI->OnManaChangedForUI.AddUniqueDynamic(this, &URPGHUDWidget::OnManaChangedDynamic);
-            
-            // 调用蓝图实现事件
-            BP_OnPlayerUIComponentInitialized(PlayerUI);
-        }
-    }
-}
-
-void URPGHUDWidget::NativeOnDeactivated()
-{
-    Super::NativeOnDeactivated();
-    
-    // 清理委托绑定
-    if (PlayerUIComponent.IsValid())
-    {
-        PlayerUIComponent->OnHealthChangedForUI.RemoveAll(this);
-        PlayerUIComponent->OnManaChangedForUI.RemoveAll(this);
-        PlayerUIComponent.Reset();
-    }
-}
-```
-
-事件回调实现：
-
-```cpp
-void URPGHUDWidget::OnHealthChangedDynamic(float NewHealth, float OldHealth)
-{
-    UpdateHealth(NewHealth, PlayerUIComponent->GetMaxHealth());
-}
-
-void URPGHUDWidget::OnManaChangedDynamic(float NewMana, float OldMana)
-{
-    UpdateMana(NewMana, PlayerUIComponent->GetMaxMana());
-}
-
-void URPGHUDWidget::UpdateHealth(float CurrentHealth, float MaxHealth)
-{
-    if (HealthBar && MaxHealth > 0.0f)
-    {
-        float HealthPercent = CurrentHealth / MaxHealth;
-        HealthBar->SetPercent(HealthPercent);
-    }
-    
-    if (HealthText)
-    {
-        FString HealthString = FString::Printf(TEXT("%.0f / %.0f"), CurrentHealth, MaxHealth);
-        HealthText->SetText(FText::FromString(HealthString));
-    }
-}
-```
-
-URPGPlayerUIComponent的事件订阅：
-
-```cpp
-// RPGPlayerUIComponent.cpp
-void URPGPlayerUIComponent::BeginPlay()
-{
-    Super::BeginPlay();
-    
-    // 获取健康组件并订阅事件
-    URPGHealthComponent* HealthComp = GetHealthComponentInternal();
-    if (HealthComp)
-    {
-        HealthComp->OnHealthChanged.AddUniqueDynamic(this, &URPGPlayerUIComponent::OnHealthChangedForUI);
-    }
-    
-    // 初始化法力系统
-    InitializeManaSystem();
-}
-
-URPGHealthComponent* URPGPlayerUIComponent::GetHealthComponentInternal() const
-{
-    APawn* PawnOwner = GetPawnOwner();
-    if (PawnOwner)
-    {
-        return PawnOwner->FindComponentByClass<URPGPlayerHealthComponent>();
-    }
-    return nullptr;
-}
-```
-
-## 4.3 控制器模块详细设计
-
-### 4.3.1 控制器类图
+### 4.4.2 战斗系统类图
 
 ```mermaid
 classDiagram
-    class AController {
-        <<UE Engine>>
-        +APawn* Pawn
-        +BeginPlay()
-        +GetPawn() APawn*
+    class UPawnExtensionComponentBase {
+        #GetOwningPawn~T~() T*
     }
     
-    class ARPGBaseController {
-        <<RPG Base>>
-        +ARPGBaseController()
-        +BeginPlay() void
-        +GetGenericTeamId() FGenericTeamId
+    class UPawnCombatComponent {
+        +RegisterSpawnWeapon(Tag, Weapon, bEquipped)
+        +GetCharacterCarriedWeaponByTag(Tag) ARPGWeaponBase*
+        +GetCharacterCurrentEquippedWeapon() ARPGWeaponBase*
+        +ToggleWeaponCollision(bEnable, ToggleDamageType)
+        +OnHitTargetActor(HitActor) void
+        +OnWeaponPullerFromTargetActor(Actor) void
+        +CurrentEquippedWeaponTag FGameplayTag
+        #OverlappedActors TArray~AActor*~
+        -CharacterCarriedWeaponMap TMap~FGameplayTag ARPGWeaponBase*~
     }
     
-    class ARPGPlayerController {
-        <<Player Controller>>
-        +ARPGPlayerController()
-        +BeginPlay() void
-        +GetGenericTeamId() FGenericTeamId
-        -ShowHUD() void
-        -PlayerTeamId FGenericTeamId
+    class UPlayerCombatComponent {
+        +GetPlayerCarriedWeaponByTag(Tag) ARPGPlayerWeapon*
+        +GetPlayerCurrentEquippedWeapon() ARPGPlayerWeapon*
+        +GetPlayerCurrentEquippedWeaponDamageAtLevel(Level) float
+        +GetComboCount(ComboType) int32
+        +SetComboCount(ComboType, Count)
+        +ResetComboCount(ComboType)
+        +AdvanceComboCount(ComboType, MaxCount)
+        +SwitchComboType(NewType)
+        +StartComboWindowTimer(Type, WindowTime)
+        +GetCurrentComboType() ERPGComboType
+        +SetCurrentComboType(Type)
+        -ComboCounts TMap~ERPGComboType int32~
+        -ComboResetTimers TMap~ERPGComboType FTimerHandle~
+        -CurrentComboType ERPGComboType
     }
     
-    class ARPGEnemyAIController {
-        <<AI Controller>>
-        +ARPGEnemyAIController()
-        +BeginPlay() void
-        +RunBehaviorTree() void
-        +OnTargetPerceptionUpdated(Actor, Stimulus) void
-        -EnemyBehaviorTree UBehaviorTree*
-        -BlackboardComp UBlackboardComponent*
-        -PerceptionComponent UAIPerceptionComponent*
+    class UEnemyCombatComponent {
+        +OnHitTargetActor(HitActor) void
+        +OnWeaponPullerFromTargetActor(Actor) void
     }
     
-    class UAIPerceptionComponent {
-        <<UE Engine>>
-        +ConfigureSense(SenseConfig) void
-        +SetDominantSense(SenseClass) void
-        +OnPerceptionUpdated Delegate
-    }
-    
-    class UBlackboardComponent {
-        <<UE Engine>>
-        +SetValueAsObject(Key, Value) void
-        +SetValueAsVector(Key, Value) void
-        +GetValueAsObject(Key) UObject*
-    }
-    
-    AController <|-- ARPGBaseController
-    ARPGBaseController <|-- ARPGPlayerController
-    ARPGBaseController <|-- ARPGEnemyAIController
-    ARPGEnemyAIController *-- UAIPerceptionComponent
-    ARPGEnemyAIController *-- UBlackboardComponent
+    UPawnExtensionComponentBase <|-- UPawnCombatComponent
+    UPawnCombatComponent <|-- UPlayerCombatComponent
+    UPawnCombatComponent <|-- UEnemyCombatComponent
 ```
 
-**图4.9 控制器详细类图**
+**图4.5 战斗系统详细类图**
 
-### 4.3.2 PlayerController初始化时序图
+### 4.4.3 攻击命中流程时序图
 
 ```mermaid
 sequenceDiagram
-    participant PC as ARPGPlayerController
-    participant GI as UGameInstance
-    participant UIS as URPGUIManagerSubsystem
-    participant Pawn as ARPGPlayerCharacter
+    participant GA as URPGGameplayAbility
+    participant Combat as UPlayerCombatComponent
+    participant Weapon as ARPGPlayerWeapon
+    participant CollisionBox as UBoxComponent
+    participant Target as ABaseCharacter
+    participant ASC as URPGAbilitySystemComponent
     
-    PC->>PC: BeginPlay()
-    PC->>PC: Super::BeginPlay()
-    PC->>GI: GetSubsystem~URPGUIManagerSubsystem~()
-    GI-->>PC: UIManager Instance
-    alt UIManager exists
-        PC->>UIS: ShowHUD(this)
-        UIS->>UIS: Create and Push HUD Widget
-    end
-    PC->>Pawn: Possess(Pawn)
-    Pawn->>Pawn: Setup Input Component
-    Pawn->>Pawn: Bind Input Actions
+    GA->>GA: ActivateAbility()
+    GA->>Combat: SetCurrentComboType(LightAttack)
+    GA->>Combat: AdvanceComboCount(LightAttack, MaxCombo)
+    GA->>GA: PlayMontageAndWait(AttackMontage)
+    Note over Weapon: AnimNotify触发碰撞开启
+    GA->>Combat: ToggleWeaponCollision(true, CurrentEquipped)
+    Combat->>Weapon: GetWeaponCollisionBox()->SetCollisionEnabled
+    CollisionBox->>Weapon: OnCollisionBoxBeginOverlap(Target)
+    Weapon->>Weapon: OnWeaponHitTarget.ExecuteIfBound(Target)
+    Weapon->>Combat: OnHitTargetActor(Target)
+    Combat->>Combat: 检查OverlappedActors防重复
+    Combat->>ASC: 通过GA应用DamageEffect到Target
+    ASC->>Target: ExecuteGameplayEffect(DamageEffect)
+    Note over Weapon: AnimNotify触发碰撞关闭
+    GA->>Combat: ToggleWeaponCollision(false, CurrentEquipped)
+    Combat->>Combat: OverlappedActors.Empty()
 ```
 
-**图4.10 PlayerController初始化时序图**
+**图4.6 攻击命中流程时序图**
 
-### 4.3.3 AIController感知与行为树时序图
+## 4.5 武器系统模块详细设计
+
+### 4.5.1 武器系统架构设计
+
+武器系统模块负责管理武器实体的创建、碰撞检测和能力授予。ARPGWeaponBase作为武器基类继承自AActor，包含WeaponMesh（UStaticMeshComponent，武器外观）和WeaponCollisionBox（UBoxComponent，攻击判定区域）。碰撞盒通过OnCollisionBoxBeginOverlap和OnCollisionBoxEndOverlap回调检测目标重叠，并通过FOnTargetInteractDelegate委托（DECLARE_DELEGATE_OneParam）通知CombatComponent。
+
+ARPGPlayerWeapon继承ARPGWeaponBase，持有FRPGPlayerWeaponData结构和GrantAbilitySpecHandles数组。FRPGPlayerWeaponData是武器的完整配置数据，包含：WeaponAnimLayerToLink（指定武器对应的URPGItemAnimLayersBase动画层子类）、EquipWeaponMontage/UnequipWeaponMontage（装备/卸下动画蒙太奇）、WeaponInputMappingContext（武器专属输入映射上下文，装备时添加到Enhanced Input）、DefaultWeaponAbilities（武器授予的能力集合，为FRPGPlayerAbilitySet数组，每项包含InputTag和AbilityToGrant）、WeaponBaseDamage（FScalableFloat，支持等级缩放的基础伤害）、SoftWeaponIconTexture（武器图标软引用）。
+
+武器装备流程：玩家触发装备能力（如RPGPlayerAbility_EquipSword）→ 能力从CombatComponent获取武器引用 → 播放EquipWeaponMontage → AnimNotify触发时将武器附加到手部插槽 → 调用ASC的GrantPlayerWeaponAbility授予武器能力 → 将AbilitySpecHandles保存到武器的GrantAbilitySpecHandles → 添加WeaponInputMappingContext到Enhanced Input → 调用AnimInstance的LinkAnimLayer链接武器动画层。
+
+### 4.5.2 武器系统类图
+
+```mermaid
+classDiagram
+    class AActor {
+        <<UE Engine>>
+    }
+    
+    class ARPGWeaponBase {
+        +OnWeaponHitTarget FOnTargetInteractDelegate
+        +OnWeaponPulledFromTarget FOnTargetInteractDelegate
+        +GetWeaponCollisionBox() UBoxComponent*
+        #WeaponMesh UStaticMeshComponent*
+        #WeaponCollisionBox UBoxComponent*
+        #OnCollisionBoxBeginOverlap(...)
+        #OnCollisionBoxEndOverlap(...)
+    }
+    
+    class ARPGPlayerWeapon {
+        +PlayerWeaponData FRPGPlayerWeaponData
+        +AssignGrantedAbilitySpecHandles(InHandles)
+        +GetGrantAbilitySpecHandles() TArray~FGameplayAbilitySpecHandle~
+        -GrantAbilitySpecHandles TArray
+    }
+    
+    class ARPGEnemyWeapon {
+    }
+    
+    class FRPGPlayerWeaponData {
+        +WeaponAnimLayerToLink TSubclassOf~URPGItemAnimLayersBase~
+        +EquipWeaponMontage UAnimMontage*
+        +UnequipWeaponMontage UAnimMontage*
+        +WeaponInputMappingContext UInputMappingContext*
+        +DefaultWeaponAbilities TArray~FRPGPlayerAbilitySet~
+        +WeaponBaseDamage FScalableFloat
+        +SoftWeaponIconTexture TSoftObjectPtr~UTexture2D~
+    }
+    
+    class FOnTargetInteractDelegate {
+        <<Delegate>>
+        +ExecuteIfBound(AActor* Target)
+    }
+    
+    AActor <|-- ARPGWeaponBase
+    ARPGWeaponBase <|-- ARPGPlayerWeapon
+    ARPGWeaponBase <|-- ARPGEnemyWeapon
+    ARPGPlayerWeapon *-- FRPGPlayerWeaponData
+    ARPGWeaponBase *-- FOnTargetInteractDelegate
+```
+
+**图4.7 武器系统详细类图**
+
+### 4.5.3 武器装备流程时序图
 
 ```mermaid
 sequenceDiagram
-    participant AIC as ARPGEnemyAIController
-    participant Perception as UAIPerceptionComponent
-    participant BB as UBlackboardComponent
-    participant BT as UBehaviorTree
     participant Player as ARPGPlayerCharacter
+    participant GA as RPGPlayerAbility_EquipSword
+    participant Combat as UPlayerCombatComponent
+    participant Weapon as ARPGPlayerWeapon
+    participant ASC as URPGAbilitySystemComponent
+    participant Anim as URPGCharacterAnimInstance
+    participant Input as UEnhancedInputLocalPlayerSubsystem
     
-    AIC->>AIC: BeginPlay()
-    AIC->>Perception: ConfigureSense(SightConfig)
-    AIC->>Perception: SetDominantSense(SightSense)
-    AIC->>BT: RunBehaviorTree(EnemyBehaviorTree)
-    
-    Perception->>Perception: Detect Player in Sight Range
-    Perception->>AIC: OnTargetPerceptionUpdated(Player, Stimulus)
-    alt Player Sensed Successfully
-        AIC->>BB: SetValueAsObject("TargetActor", Player)
-        AIC->>BB: SetValueAsVector("TargetLocation", Player.GetActorLocation())
-        BB->>BT: Update Blackboard Data
-        BT->>BT: Execute Combat Sequence
-        BT->>BT: MoveTo Target
-    end
+    Player->>ASC: OnAbilityInputPressed(InputTag_EquipSword)
+    ASC->>GA: ActivateAbility()
+    GA->>Combat: GetCharacterCarriedWeaponByTag(Player_Weapon_Sword)
+    Combat-->>GA: ARPGPlayerWeapon*
+    GA->>GA: PlayMontageAndWait(EquipWeaponMontage)
+    Note over GA: AnimNotify: 附加武器到手部插槽
+    GA->>Combat: RegisterSpawnWeapon(Tag, Weapon, true)
+    GA->>ASC: GrantPlayerWeaponAbility(DefaultWeaponAbilities, Level, OutHandles)
+    ASC-->>GA: GrantedAbilitySpecHandles
+    GA->>Weapon: AssignGrantedAbilitySpecHandles(Handles)
+    GA->>Input: AddMappingContext(WeaponInputMappingContext)
+    GA->>Anim: LinkAnimLayer(WeaponAnimLayerToLink)
+    GA->>GA: EndAbility()
 ```
 
-**图4.11 AIController感知与行为树时序图**
+**图4.8 武器装备流程时序图**
 
-### 4.3.4 核心代码实现
+## 4.6 能力系统(GAS)模块详细设计
 
-ARPGPlayerController实现：
+### 4.6.1 能力系统架构设计
 
-```cpp
-// RPGPlayerController.cpp
-ARPGPlayerController::ARPGPlayerController()
-{
-    PlayerTeamId = FGenericTeamId(0);  // 玩家团队ID为0（中立）
-}
+能力系统模块基于UE5的Gameplay Ability System（GAS）实现，提供属性管理、能力授予/激活、GameplayEffect应用等功能。系统核心组件包括URPGAbilitySystemComponent（扩展ASC）、URPGAttributeSet（四类属性集）和URPGGameplayAbility（能力基类）。
 
-void ARPGPlayerController::BeginPlay()
-{
-    Super::BeginPlay();
-    
-    // 显示HUD
-    if (URPGUIManagerSubsystem* UIManager = GetGameInstance()->GetSubsystem<URPGUIManagerSubsystem>())
-    {
-        UIManager->ShowHUD(this);
+URPGAbilitySystemComponent扩展UAbilitySystemComponent，添加三个核心功能：（1）OnAbilityInputPressed/OnAbilityInputReleased方法接收GameplayTag形式的输入标签，遍历已授予的能力找到匹配InputTag的能力并激活/取消；（2）GrantPlayerWeaponAbility方法批量授予武器能力，接收FRPGPlayerAbilitySet数组和等级参数，返回OutGrantedAbilitySpecHandles用于后续移除；（3）TryActivateAbilityByTag方法通过AbilityTag直接激活能力，用于AI行为树的BTTask_ActivateAbilityByTag任务节点。
+
+URPGAttributeSet继承UAttributeSet，定义四类属性，每个属性使用FGameplayAttributeData类型并通过ATTRIBUTE_ACCESSORS宏生成访问器。主属性（Primary）包含Strength（力量，影响物理攻击力）、Intelligence（智力，影响魔法攻击力）、Vitality（体质，影响生命值）、Agility（敏捷，影响闪避/暴击）。次属性（Secondary）包含Armor（护甲）、CriticalHitChance（暴击率0-100）、CriticalHitDamage（暴击倍数，基础1.0）、HealthRegeneration（生命回复/秒）、ManaRegeneration（法力回复/秒）。核心属性（Vital）包含CurrentHealth/MaxHealth、CurrentRage/MaxRage、CurrentMana/MaxMana。元属性（Meta）包含DamageTaken（受到伤害，用于伤害计算中间值）、IncomingXP（获得经验）、AttackPower（攻击力）、DefensePower（防御力）。所有核心和主要属性通过ReplicatedUsing支持网络复制。
+
+属性变更通过三个回调处理：PreAttributeChange在属性修改前调用，用于值钳制（如确保CurrentHealth不超过MaxHealth）；PostAttributeChange在属性修改后调用，触发UI更新委托；PostGameplayEffectExecute在GameplayEffect执行后调用，用于处理DamageTaken元属性的伤害计算逻辑（应用护甲减伤、暴击倍率等）。
+
+URPGGameplayAbility继承UGameplayAbility，提供ERPGAbilityActivationPolicy枚举（OnTriggered：输入触发激活；OnGive：授予时立即激活）。基类提供GetPawnCombatComponentFromActorInfo和GetRPGAbilitySystemComponentFromActorInfo辅助方法，以及NativeApplyEffectSpecHandleToTarget/BP_ApplyEffectSpecHandleToTarget伤害应用方法。URPGEnemyGameplayAbility继承URPGGameplayAbility，添加GetEnemyCharacterFromActorInfo和GetEnemyCombatComponentFromActorInfo敌人特有辅助方法。
+
+### 4.6.2 能力系统类图
+
+```mermaid
+classDiagram
+    class UAbilitySystemComponent {
+        <<UE GAS>>
     }
-}
-
-FGenericTeamId ARPGPlayerController::GetGenericTeamId() const
-{
-    return PlayerTeamId;
-}
+    
+    class URPGAbilitySystemComponent {
+        +OnAbilityInputPressed(InputTag)
+        +OnAbilityInputReleased(InputTag)
+        +GrantPlayerWeaponAbility(AbilitySet, Level, OutHandles)
+        +RemovedGrantPlayerWeaponAbility(Handles)
+        +TryActivateAbilityByTag(Tag) bool
+    }
+    
+    class UAttributeSet {
+        <<UE GAS>>
+    }
+    
+    class URPGAttributeSet {
+        +Strength FGameplayAttributeData
+        +Intelligence FGameplayAttributeData
+        +Vitality FGameplayAttributeData
+        +Agility FGameplayAttributeData
+        +Armor FGameplayAttributeData
+        +CriticalHitChance FGameplayAttributeData
+        +CriticalHitDamage FGameplayAttributeData
+        +HealthRegeneration FGameplayAttributeData
+        +ManaRegeneration FGameplayAttributeData
+        +CurrentHealth FGameplayAttributeData
+        +MaxHealth FGameplayAttributeData
+        +CurrentRage FGameplayAttributeData
+        +MaxRage FGameplayAttributeData
+        +CurrentMana FGameplayAttributeData
+        +MaxMana FGameplayAttributeData
+        +DamageTaken FGameplayAttributeData
+        +IncomingXP FGameplayAttributeData
+        +AttackPower FGameplayAttributeData
+        +DefensePower FGameplayAttributeData
+        +OnHealthChanged FOnAttributeValueChanged
+        +OnManaChanged FOnAttributeValueChanged
+        +PreAttributeChange(Attribute, NewValue)
+        +PostAttributeChange(Attribute, OldValue, NewValue)
+        +PostGameplayEffectExecute(Data)
+    }
+    
+    class UGameplayAbility {
+        <<UE GAS>>
+    }
+    
+    class URPGGameplayAbility {
+        +GetPawnCombatComponentFromActorInfo() UPawnCombatComponent*
+        +GetRPGAbilitySystemComponentFromActorInfo() URPGAbilitySystemComponent*
+        +NativeApplyEffectSpecHandleToTarget(Target, Handle)
+        +BP_ApplyEffectSpecHandleToTarget(Target, Handle, OutSuccess)
+        #AbilityActivationPolicy ERPGAbilityActivationPolicy
+        #OnGiveAbility(ActorInfo, Spec)
+        #EndAbility(...)
+    }
+    
+    class URPGEnemyGameplayAbility {
+        +GetEnemyCharacterFromActorInfo() ARPGEnemyCharacter*
+        +GetEnemyCombatComponentFromActorInfo() UEnemyCombatComponent*
+    }
+    
+    UAbilitySystemComponent <|-- URPGAbilitySystemComponent
+    UAttributeSet <|-- URPGAttributeSet
+    UGameplayAbility <|-- URPGGameplayAbility
+    URPGGameplayAbility <|-- URPGEnemyGameplayAbility
 ```
 
-ARPGEnemyAIController实现：
+**图4.9 能力系统详细类图**
 
-```cpp
-// RPGEnemyAIController.cpp
-void ARPGEnemyAIController::BeginPlay()
-{
-    Super::BeginPlay();
-    
-    // 配置AI感知
-    UAIPerceptionComponent* PerceptionComponent = FindComponentByClass<UAIPerceptionComponent>();
-    if (PerceptionComponent)
-    {
-        PerceptionComponent->OnTargetPerceptionUpdated.AddDynamic(this, &ARPGEnemyAIController::OnTargetPerceptionUpdated);
-    }
-    
-    // 运行行为树
-    if (EnemyBehaviorTree)
-    {
-        RunBehaviorTree(EnemyBehaviorTree);
-    }
-}
+### 4.6.3 能力激活与伤害计算时序图
 
-void ARPGEnemyAIController::OnTargetPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)
-{
-    if (Stimulus.WasSuccessfullySensed() && Actor->ActorHasTag(TEXT("Player")))
-    {
-        // 将玩家信息写入黑板
-        if (UBlackboardComponent* Blackboard = GetBlackboardComponent())
-        {
-            Blackboard->SetValueAsObject(TEXT("TargetActor"), Actor);
-            Blackboard->SetValueAsVector(TEXT("TargetLocation"), Actor->GetActorLocation());
-        }
-    }
-    else if (!Stimulus.WasSuccessfullySensed())
-    {
-        // 失去目标，清除黑板数据
-        if (UBlackboardComponent* Blackboard = GetBlackboardComponent())
-        {
-            Blackboard->ClearValue(TEXT("TargetActor"));
-            Blackboard->ClearValue(TEXT("TargetLocation"));
-        }
-    }
-}
+```mermaid
+sequenceDiagram
+    participant Input as URPGEnhancedInputComponent
+    participant Char as ARPGPlayerCharacter
+    participant ASC as URPGAbilitySystemComponent
+    participant GA as RPGPlayerAbility_LightAttack
+    participant Combat as UPlayerCombatComponent
+    participant Weapon as ARPGPlayerWeapon
+    participant TargetASC as Target ASC
+    participant AttrSet as URPGAttributeSet
+    
+    Input->>Char: Input_AbilityInputPressed(InputTag_LightAttack)
+    Char->>ASC: OnAbilityInputPressed(InputTag_LightAttack)
+    ASC->>ASC: 遍历ActivatableAbilities匹配InputTag
+    ASC->>GA: TryActivateAbility()
+    GA->>Combat: GetPlayerCurrentEquippedWeaponDamageAtLevel(Level)
+    Combat-->>GA: BaseDamage (FScalableFloat)
+    GA->>GA: MakeOutgoingGameplayEffectSpec(DamageEffect)
+    GA->>GA: Spec.SetSetByCallerTagMagnitude(BaseDamage, Value)
+    Note over GA: 攻击动画播放，碰撞检测命中目标
+    GA->>GA: NativeApplyEffectSpecHandleToTarget(Target, Spec)
+    GA->>TargetASC: ApplyGameplayEffectSpecToSelf(Spec)
+    TargetASC->>AttrSet: PostGameplayEffectExecute(Data)
+    AttrSet->>AttrSet: 提取DamageTaken值
+    AttrSet->>AttrSet: 计算FinalDamage = DamageTaken - Armor
+    AttrSet->>AttrSet: CurrentHealth -= FinalDamage
+    AttrSet->>AttrSet: Clamp(CurrentHealth, 0, MaxHealth)
 ```
 
-## 4.4 动画模块详细设计
+**图4.10 能力激活与伤害计算时序图**
 
-### 4.4.1 动画模块类图
+## 4.7 动画系统模块详细设计
+
+### 4.7.1 动画系统架构设计
+
+动画模块采用三层动画实例架构：URPGBaseAnimInstance提供基础运动参数计算和GAS系统引用，URPGCharacterAnimInstance实现角色动画状态管理（移动状态、跳跃状态机、步态系统、Linked Anim Layers），URPGItemAnimLayersBase实现武器动画层的数据同步。
+
+URPGBaseAnimInstance在NativeInitializeAnimation中缓存OwningCharacter、MovementComponent和AbilitySystemComponent引用。NativeUpdateAnimation每帧计算运动参数：GroundSpeed（水平速度Size2D）、Direction（移动方向角度）、Velocity（速度向量）、VerticalSpeed（垂直速度）、bIsMoving/bIsFalling/bIsGrounded状态标志。DoesOwnerHaveTag方法（标记BlueprintThreadSafe）提供线程安全的GameplayTag查询。
+
+URPGCharacterAnimInstance在NativeThreadSafeUpdateAnimation中（线程安全版本）执行三个更新步骤：UpdateMovementState（通过速度阈值WalkSpeedThreshold/RunSpeedThreshold/SprintSpeedThreshold计算bIsIdle/bIsWalking/bIsRunning/bIsSprinting布尔状态）、UpdateGaitAmount（计算GaitAmount步态比例，范围0.0-3.0，驱动BlendSpace混合）、UpdateJumpState（管理跳跃状态机）。
+
+跳跃状态机通过EJumpState枚举（None/Start/Loop/Land）管理四个跳跃阶段。HandleJumpStart检测VerticalSpeed超过JumpStartVerticalSpeedThreshold且非地面状态时进入Start。HandleJumpLoop在Start阶段持续一定时间后自动转为Loop。HandleJumpLand通过TimeSinceGrounded和bWasFallingLastFrame检测落地，配置LandDetectionDelay防止瞬时触地误判。bCanJumpStart/bCanJumpLoop/bCanJumpLand布尔变量供动画蓝图Transition Rule使用，bJumpAnimationFinished由动画通知回调OnJumpAnimationFinished设置。
+
+Linked Anim Layers机制通过LinkAnimLayer(TSubclassOf<UAnimInstance>)方法实现运行时动画层切换。当玩家装备武器时，CharacterAnimInstance链接武器对应的URPGItemAnimLayersBase子类。URPGItemAnimLayersBase在NativeInitializeAnimation中缓存PlayerCombatComponent引用，NativeUpdateAnimation每帧通过SyncFromCombatComponent同步战斗数据：WeaponType（武器类型枚举）、CombatState（战斗状态）、ComboIndex（连招索引）、MaxComboCount、bIsInComboWindow、AttackSpeedMultiplier、bIsAttacking。
+
+### 4.7.2 动画系统类图
 
 ```mermaid
 classDiagram
     class UAnimInstance {
         <<UE Engine>>
-        +NativeInitializeAnimation() void
-        +NativeUpdateAnimation() void
-        +Montage_Play(Montage, InPlayRate) bool
     }
     
     class URPGBaseAnimInstance {
-        <<Anim Base>>
-        +NativeInitializeAnimation() void
-        +NativeUpdateAnimation() void
-        +IsIdle() bool
-        +IsMoving() bool
-        +IsAttacking() bool
-        #Character ARPGCharacterBase*
-        #Speed float
+        +NativeInitializeAnimation()
+        +NativeUpdateAnimation(DeltaSeconds)
+        +DoesOwnerHaveTag(Tag) bool
+        #OwningCharacter TObjectPtr~ACharacter~
+        #MovementComponent TObjectPtr~UCharacterMovementComponent~
+        #AbilitySystemComponent TObjectPtr~UAbilitySystemComponent~
+        #GroundSpeed float
         #Direction float
-        #bIsInAir bool
-        #bIsAttacking bool
+        #Velocity FVector
+        #VerticalSpeed float
+        #bIsMoving bool
+        #bIsFalling bool
+        #bIsGrounded bool
     }
     
     class URPGCharacterAnimInstance {
-        <<Character Anim>>
-        +NativeUpdateAnimation() void
-        +PlayAttackMontage(AttackMontage) void
-        +GetMovementDirection() float
-        #AttackMontage UAnimMontage*
-        #MovementDirection float
+        +NativeThreadSafeUpdateAnimation(DeltaSeconds)
+        +LinkAnimLayer(AnimClass)
+        +UnlinkAnimLayer()
+        +OnJumpAnimationFinished()
+        #bIsIdle bool
+        #bIsWalking bool
+        #bIsRunning bool
+        #bIsSprinting bool
+        #CurrentJumpState EJumpState
+        #bIsJumping bool
+        #bCanJumpStart bool
+        #bCanJumpLoop bool
+        #bCanJumpLand bool
+        #bJumpAnimationFinished bool
+        #GaitAmount float
+        #WalkSpeedThreshold float
+        #RunSpeedThreshold float
+        #SprintSpeedThreshold float
+        #JumpStartVerticalSpeedThreshold float
+        #LandDetectionDelay float
+        +CurrentLinkedLayerClass TSubclassOf
+    }
+    
+    class URPGItemAnimLayersBase {
+        <<Abstract>>
+        +NativeInitializeAnimation()
+        +NativeUpdateAnimation(DeltaSeconds)
+        +GetWeaponType() ERPGWeaponType
+        +SetWeaponType(NewType)
+        #CombatComponent TObjectPtr~UPlayerCombatComponent~
+        #WeaponType ERPGWeaponType
+        #CombatState ERPGCombatState
+        #ComboIndex int32
+        #MaxComboCount int32
+        #bIsInComboWindow bool
+        #AttackSpeedMultiplier float
+        #bIsAttacking bool
     }
     
     UAnimInstance <|-- URPGBaseAnimInstance
     URPGBaseAnimInstance <|-- URPGCharacterAnimInstance
-    URPGCharacterAnimInstance --> URPGBaseAnimInstance : 继承
+    URPGBaseAnimInstance <|-- URPGItemAnimLayersBase
 ```
 
-**图4.12 动画模块类图**
+**图4.11 动画系统详细类图**
 
-### 4.4.2 动画状态机工作时序图
+### 4.7.3 动画状态机工作时序图
 
 ```mermaid
 sequenceDiagram
-    participant Char as RPGPlayerCharacter
+    participant Char as ARPGPlayerCharacter
     participant Anim as URPGCharacterAnimInstance
-    participant SM as State Machine
-    participant BlendSpace as BlendSpace2D
-    participant Montage as AnimMontage
+    participant SM as Animation State Machine
+    participant BS as BlendSpace2D
+    participant Layer as URPGItemAnimLayersBase
+    participant Combat as UPlayerCombatComponent
     
-    Char->>Char: Tick(DeltaTime)
-    Char->>Anim: NativeUpdateAnimation()
-    Anim->>Char: GetVelocity()
-    Char-->>Anim: Velocity Vector
-    Anim->>Anim: Calculate Speed and Direction
-    Anim->>SM: Update State Machine
-    alt Speed < 100
-        SM->>SM: Transition to Idle
-    else Speed < 300
-        SM->>BlendSpace: Play Walk BlendSpace
-        BlendSpace->>BlendSpace: Interpolate by Speed & Direction
-    else
-        SM->>BlendSpace: Play Run BlendSpace
-        BlendSpace->>BlendSpace: Interpolate by Speed & Direction
+    Char->>Anim: NativeThreadSafeUpdateAnimation(DeltaTime)
+    Anim->>Anim: UpdateMovementState()
+    Note over Anim: 计算bIsIdle/Walk/Run/Sprint
+    Anim->>Anim: UpdateGaitAmount()
+    Note over Anim: GaitAmount = 0(Idle)/1(Walk)/2(Run)/3(Sprint)
+    Anim->>Anim: UpdateJumpState(DeltaTime)
+    alt bIsFalling 且 VerticalSpeed > Threshold
+        Anim->>Anim: HandleJumpStart() -> EJumpState::Start
+    else 持续滞空
+        Anim->>Anim: HandleJumpLoop() -> EJumpState::Loop
+    else 检测到着地
+        Anim->>Anim: HandleJumpLand() -> EJumpState::Land
     end
-    alt Attack Input Received
-        Anim->>Montage: PlayAttackMontage()
-        Montage->>Montage: Play Attack Animation
-        Montage->>Anim: Notify(AttackHit)
+    Anim->>SM: 传递bCanJumpStart/Loop/Land
+    SM->>BS: GaitAmount + Direction驱动BlendSpace
+    
+    par 武器动画层同步
+        Layer->>Layer: NativeUpdateAnimation(DeltaTime)
+        Layer->>Combat: 读取CombatState/ComboIndex等
+        Combat-->>Layer: 同步战斗状态数据
+        Layer->>Layer: SyncFromCombatComponent()
     end
 ```
 
-**图4.13 动画状态机工作时序图**
+**图4.12 动画状态机工作时序图**
 
-### 4.4.3 核心代码实现
+## 4.8 控制器模块详细设计
 
-URPGBaseAnimInstance实现：
+### 4.8.1 控制器架构设计
 
-```cpp
-// RPGBaseAnimInstance.cpp
-void URPGBaseAnimInstance::NativeInitializeAnimation()
-{
-    Super::NativeInitializeAnimation();
-    
-    // 获取角色引用
-    APawn* PawnOwner = TryGetPawnOwner();
-    if (PawnOwner)
-    {
-        Character = Cast<ARPGCharacterBase>(PawnOwner);
-    }
-}
+控制模块包含两条独立的继承链。玩家控制器链：APlayerController → ARPGBaseController（实现IGenericTeamAgentInterface）→ ARPGPlayerController。AI控制器链：AAIController → ARPGEnemyAIController（独立实现团队系统）。两者不共享继承关系，但都通过IGenericTeamAgentInterface/GetTeamAttitudeTowards实现团队识别。
 
-void URPGBaseAnimInstance::NativeUpdateAnimation()
-{
-    Super::NativeUpdateAnimation();
-    
-    if (!Character)
-    {
-        return;
+ARPGPlayerController在构造函数中设置PlayerTeamId = FGenericTeamId(0)（中立团队）。BeginPlay中完成UI初始化。GetGenericTeamId返回PlayerTeamId供AI感知系统使用。
+
+ARPGEnemyAIController在构造函数中通过InitializePerception方法初始化AI感知系统。创建BehaviorTreeComponent和BlackboardComponent子对象。配置EnemySightConfig（UAISenseConfig_Sight）的参数：SightRadius（默认视觉半径）、LoseSightRadius（丢失视觉半径，大于SightRadius）、PeripheralVisionAngle（边缘视野角度）、PerceptionMaxAge（感知信息有效期）、bDetectEnemies（是否检测敌人）。创建EnemyPerceptionComponent并注册SightConfig。
+
+GetTeamAttitudeTowards方法通过IGenericTeamAgentInterface获取Other的TeamId，与自身EnemyTeamId比较返回Hostile/Friendly/Neutral态度。OnTargetPerceptionUpdated和OnEnemyPerceptionUpdated处理感知回调，将感知到的Actor存入PerceivedActors缓存（TMap<AActor*, float>记录感知时间），UpdateNearestTarget方法将最近目标写入Blackboard。RunBehaviorTreeWithBlackboard方法由EnemyCharacter在PossessedBy中调用，初始化并运行行为树。
+
+### 4.8.2 控制器类图
+
+```mermaid
+classDiagram
+    class APlayerController {
+        <<UE Engine>>
     }
     
-    // 更新移动速度
-    FVector Velocity = Character->GetVelocity();
-    Speed = Velocity.Size2D();
-    
-    // 更新移动方向
-    if (Speed > 0.0f)
-    {
-        FVector ForwardVector = Character->GetActorForwardVector();
-        Direction = FVector::DotProduct(Velocity.GetSafeNormal(), ForwardVector);
-    }
-    else
-    {
-        Direction = 0.0f;
+    class AAIController {
+        <<UE Engine>>
     }
     
-    // 更新空中状态
-    bIsInAir = !Character->GetMovementComponent()->IsMovingOnGround();
-}
+    class IGenericTeamAgentInterface {
+        <<Interface>>
+        +GetGenericTeamId() FGenericTeamId
+        +GetTeamAttitudeTowards(Other) ETeamAttitude
+    }
+    
+    class ARPGBaseController {
+        +ARPGBaseController()
+    }
+    
+    class ARPGPlayerController {
+        +BeginPlay()
+        +GetGenericTeamId() FGenericTeamId
+        -PlayerTeamId FGenericTeamId
+    }
+    
+    class ARPGEnemyAIController {
+        +GetTeamAttitudeTowards(Other) ETeamAttitude
+        +RunBehaviorTreeWithBlackboard(BT)
+        +GetBehaviorTreeComponent() UBehaviorTreeComponent*
+        +OnTargetPerceptionUpdated(Actor, Stimulus)
+        +OnEnemyPerceptionUpdated(Actor, Stimulus)
+        #SightRadius float
+        #LoseSightRadius float
+        #PeripheralVisionAngle float
+        #PerceptionMaxAge float
+        #bDetectEnemies bool
+        #BehaviorTreeComponent TObjectPtr
+        #BlackboardComp TObjectPtr
+        #EnemyPerceptionComponent TObjectPtr
+        #EnemySightConfig TObjectPtr
+        #PerceivedActors TMap~AActor* float~
+        -InitializePerception()
+        -UpdateNearestTarget()
+        -EnemyTeamId FGenericTeamId
+    }
+    
+    APlayerController <|-- ARPGBaseController
+    ARPGBaseController ..|> IGenericTeamAgentInterface
+    ARPGBaseController <|-- ARPGPlayerController
+    AAIController <|-- ARPGEnemyAIController
 ```
 
-URPGCharacterAnimInstance实现：
+**图4.13 控制器详细类图**
 
-```cpp
-// RPGCharacterAnimInstance.cpp
-void URPGCharacterAnimInstance::NativeUpdateAnimation()
-{
-    Super::NativeUpdateAnimation();
-    
-    // 计算移动方向
-    MovementDirection = GetMovementDirection();
-}
+## 4.9 AI模块详细设计
 
-float URPGCharacterAnimInstance::GetMovementDirection()
-{
-    if (Speed <= 0.0f)
-    {
-        return 0.0f;
-    }
-    
-    APawn* PawnOwner = TryGetPawnOwner();
-    if (!PawnOwner)
-    {
-        return 0.0f;
-    }
-    
-    FVector Velocity = PawnOwner->GetVelocity();
-    FVector ForwardVector = PawnOwner->GetActorForwardVector();
-    
-    float DotProduct = FVector::DotProduct(Velocity.GetSafeNormal2D(), ForwardVector);
-    
-    if (DotProduct > 0.0f)
-    {
-        return 0.0f;  // 前进
-    }
-    else
-    {
-        return 180.0f;  // 后退
-    }
-}
+### 4.9.1 AI系统架构设计
 
-void URPGCharacterAnimInstance::PlayAttackMontage(UAnimMontage* AttackMontage)
-{
-    if (AttackMontage)
-    {
-        Montage_Play(AttackMontage, 1.0f);
-    }
-}
-```
+AI模块通过ARPGEnemyAIController协调行为树、黑板和感知系统。ARPGEnemyCharacter在PossessedBy中获取AI控制器引用并调用RunBehaviorTreeWithBlackboard启动行为树。行为树通过自定义Task、Service和Decorator节点实现敌人行为逻辑。
 
-## 4.5 系统整体用例图
+自定义行为树任务（BTTask）：
+- BTTask_RotateToFaceTarget：平滑旋转朝向目标Actor。使用FRotateToFaceTargetTaskMemory存储OwningPawn和TargetActor弱引用，通过AnglePrecision（角度精度）和RotationInterpSpeed（旋转插值速度）控制旋转行为，使用InTargetToFaceKey从黑板读取目标。
+- BTTask_ActivateAbilityByTag：通过GameplayTag激活ASC能力，用于触发攻击等行为。
+- BTTask_FindRandomPatrolPoint：在导航网格上找到随机巡逻点，写入黑板。
+- BTTask_FindStrafingPoint_EQS：使用环境查询系统（EQS）找到适合侧移的位置点。
+- BTTask_SetMovementSpeed：设置AI角色的移动速度（巡逻/追逐/冲刺等不同速度）。
 
-### 4.5.1 玩家用例图
+自定义行为树服务（BTService）：
+- BTService_FindNearestPlayer：定期查找最近的玩家并更新黑板的TargetActor键。
+- BTService_OrientToTargetActor：持续使AI朝向目标Actor（与Task版本不同，Service在后台持续运行）。
+
+自定义行为树装饰器（BTDecorator）：
+- BTDecorator_RandomChance：基于随机概率决定子节点是否执行，用于增加AI行为的不可预测性。
+
+### 4.9.2 AI行为树结构
 
 ```mermaid
 graph TB
-    subgraph 玩家交互
+    subgraph 行为树结构
+        Root[Root Selector]
+        
+        subgraph 战斗序列
+            CombatSel[Selector: Combat]
+            HasTarget{HasTarget?}
+            InRange{InAttackRange?}
+            Attack[BTTask_ActivateAbilityByTag]
+            Chase[MoveTo TargetActor]
+            Strafe[BTTask_FindStrafingPoint_EQS]
+            Rotate[BTTask_RotateToFaceTarget]
+        end
+        
+        subgraph 巡逻序列
+            PatrolSeq[Sequence: Patrol]
+            FindPoint[BTTask_FindRandomPatrolPoint]
+            MoveTo[MoveTo PatrolPoint]
+            Wait[Wait 3-5s]
+        end
+    end
+    
+    subgraph 服务层
+        S1[BTService_FindNearestPlayer]
+        S2[BTService_OrientToTargetActor]
+    end
+    
+    Root --> CombatSel
+    Root --> PatrolSeq
+    CombatSel --> HasTarget
+    HasTarget --> InRange
+    InRange --> Attack
+    HasTarget --> Chase
+    CombatSel --> Strafe
+    CombatSel --> Rotate
+    PatrolSeq --> FindPoint
+    PatrolSeq --> MoveTo
+    PatrolSeq --> Wait
+    S1 -.附加到Root.-> Root
+    S2 -.附加到Combat.-> CombatSel
+```
+
+**图4.14 AI行为树结构图**
+
+### 4.9.3 AI感知与目标追踪时序图
+
+```mermaid
+sequenceDiagram
+    participant Enemy as ARPGEnemyCharacter
+    participant AIC as ARPGEnemyAIController
+    participant Perception as UAIPerceptionComponent
+    participant BB as UBlackboardComponent
+    participant BT as UBehaviorTreeComponent
+    participant Player as ARPGPlayerCharacter
+    
+    Enemy->>Enemy: PossessedBy(AIC)
+    Enemy->>AIC: RunBehaviorTreeWithBlackboard(EnemyBehaviorTree)
+    AIC->>AIC: UseBlackboard(BehaviorTree->BlackboardAsset)
+    AIC->>BT: StartTree(BehaviorTree)
+    
+    loop 感知系统更新
+        Perception->>Perception: 锥形检测(SightRadius, VisionAngle)
+        alt 检测到Player
+            Perception->>AIC: OnTargetPerceptionUpdated(Player, Stimulus)
+            AIC->>AIC: OnEnemyPerceptionUpdated(Player, Stimulus)
+            AIC->>AIC: PerceivedActors.Add(Player, CurrentTime)
+            AIC->>AIC: UpdateNearestTarget()
+            AIC->>BB: SetValueAsObject(TargetActor, Player)
+        else Player离开感知范围
+            Perception->>AIC: OnTargetPerceptionUpdated(Player, LostStimulus)
+            AIC->>AIC: PerceivedActors.Remove(Player)
+            AIC->>BB: ClearValue(TargetActor)
+        end
+    end
+    
+    BT->>BB: GetValueAsObject(TargetActor)
+    alt TargetActor有效
+        BT->>BT: 执行战斗序列
+    else TargetActor无效
+        BT->>BT: 执行巡逻序列
+    end
+```
+
+**图4.15 AI感知与目标追踪时序图**
+
+## 4.10 输入模块详细设计
+
+### 4.10.1 输入系统架构设计
+
+输入模块基于UE5增强输入系统（Enhanced Input System）构建，通过URPGEnhancedInputComponent提供GameplayTag驱动的输入绑定机制。该组件继承自UEnhancedInputComponent，提供两个核心模板方法：BindNativeInputAction用于绑定原生输入动作（如移动、视角），BindAbilityInputAction用于批量绑定能力输入动作（如攻击、翻滚）。
+
+输入配置通过UDataAsset_InputConfig数据资产集中管理。该数据资产包含三个核心属性：DefaultMappingContext（默认输入映射上下文）、NativeInputActions（原生输入动作映射数组）和AbilityInputActions（能力输入动作映射数组）。每个映射条目由FRPGInputActionConfig结构体定义，包含InputTag（FGameplayTag类型的输入标签）和InputAction（UInputAction指针）两个字段，通过IsValid()方法验证配置有效性。
+
+### 4.10.2 输入绑定机制
+
+BindNativeInputAction模板方法接受输入配置资产、目标GameplayTag、触发事件类型和回调函数。其内部通过FindNativeInputActionByTag在NativeInputActions数组中按Tag查找对应的UInputAction，然后调用父类BindAction完成绑定。此方法用于移动（InputTag_Move）、视角（InputTag_Look）等需要持续触发的原生输入。
+
+BindAbilityInputAction模板方法遍历InputConfig中的AbilityInputActions数组，对每个有效配置项同时绑定Started（按下）和Completed（释放）两个触发事件，将InputTag作为附加参数传递给回调函数。这使得单一回调函数能够根据传入的Tag区分不同能力输入，实现统一的能力输入调度。
+
+### 4.10.3 输入模块类图
+
+```mermaid
+classDiagram
+    class UEnhancedInputComponent {
+        +BindAction()
+    }
+    
+    class URPGEnhancedInputComponent {
+        +BindNativeInputAction(Config, Tag, TriggerEvent, Object, Func)
+        +BindAbilityInputAction(Config, Object, PressedFunc, ReleasedFunc)
+    }
+    
+    class UDataAsset_InputConfig {
+        +DefaultMappingContext UInputMappingContext*
+        +NativeInputActions TArray~FRPGInputActionConfig~
+        +AbilityInputActions TArray~FRPGInputActionConfig~
+        +FindNativeInputActionByTag(Tag) UInputAction*
+    }
+    
+    class FRPGInputActionConfig {
+        +InputTag FGameplayTag
+        +InputAction UInputAction*
+        +IsValid() bool
+    }
+    
+    UEnhancedInputComponent <|-- URPGEnhancedInputComponent
+    UDataAsset_InputConfig --> FRPGInputActionConfig
+    URPGEnhancedInputComponent ..> UDataAsset_InputConfig : 使用
+```
+
+**图4.16 输入模块类图**
+
+### 4.10.4 输入绑定时序图
+
+```mermaid
+sequenceDiagram
+    participant PC as ARPGPlayerController
+    participant Char as ARPGPlayerCharacter
+    participant EIC as URPGEnhancedInputComponent
+    participant Config as UDataAsset_InputConfig
+    participant EIS as EnhancedInputSubsystem
+    
+    PC->>EIS: AddMappingContext(DefaultMappingContext)
+    Char->>Char: SetupPlayerInputComponent(InputComponent)
+    Char->>EIC: BindNativeInputAction(Config, InputTag_Move, Triggered, Move)
+    EIC->>Config: FindNativeInputActionByTag(InputTag_Move)
+    Config-->>EIC: UInputAction* (IA_Move)
+    EIC->>EIC: BindAction(IA_Move, Triggered, Char, Move)
+    
+    Char->>EIC: BindAbilityInputAction(Config, Char, OnPressed, OnReleased)
+    loop 遍历AbilityInputActions
+        EIC->>EIC: BindAction(InputAction, Started, Char, OnPressed, InputTag)
+        EIC->>EIC: BindAction(InputAction, Completed, Char, OnReleased, InputTag)
+    end
+```
+
+**图4.17 输入绑定时序图**
+
+## 4.11 数据资产系统详细设计
+
+### 4.11.1 数据资产架构设计
+
+数据资产系统采用继承体系实现角色启动配置的统一管理。UDataAsset_StartUpDataBase作为启动数据基类，定义了三个核心配置数组：ActiveOnGivenAbilities（授予时立即激活的能力，如被动技能）、ReactiveAbilities（响应式能力，授予但不自动激活，等待输入触发）和StartUpGameplayEffect（启动时应用的GameplayEffect，如初始属性设置）。基类提供GiveToAbilitySystemComponent虚函数，子类可覆写以扩展授予逻辑。内部通过GrantAbilities辅助方法统一处理能力授予。
+
+UDataAsset_PlayerStartUpData继承基类，新增PlayerStartUpAbilitySet数组（FRPGPlayerAbilitySet结构体数组）。该结构体将InputTag与AbilityToGrant（TSubclassOf<URPGPlayerGameplayAbility>）绑定，实现输入标签到能力类的映射。覆写GiveToAbilitySystemComponent时，除调用基类逻辑外，还处理玩家特有的输入绑定能力授予。
+
+UDataAsset_EnemyStartUpData同样继承基类，当前未添加额外字段，完全复用基类的ActiveOnGivenAbilities和ReactiveAbilities配置。其设计预留了敌人特有启动逻辑的扩展点。
+
+### 4.11.2 角色配置数据资产
+
+UDataAsset_CharacterConfig定义玩家角色的基础信息和属性配置。包含CharacterName（角色名称）、CharacterClass（ERPGCharacterClass职业枚举）、CharacterDescription（角色描述）和BaseAttributes（FCharacterBaseAttributes结构体）。通过ApplyAttributesToASC方法将配置的属性值通过GameplayEffect应用到AbilitySystemComponent。
+
+UDataAsset_EnemyConfig与玩家配置对称设计，包含EnemyName、EnemyType（EEnemyType枚举：Normal/Elite/Boss/Minion）、EnemyDescription和BaseAttributes（FEnemyBaseAttributes结构体）。敌人属性结构体针对敌人特点设计，包含MaxHealth、AttackPower、DefensePower等战斗属性，以及Armor、MagicResistance、StaggerResistance、PoisonResistance、BleedResistance等抗性属性，并附带GoldDrop和EXPDrop掉落配置。
+
+### 4.11.3 数据资产继承类图
+
+```mermaid
+classDiagram
+    class UDataAsset_StartUpDataBase {
+        +GiveToAbilitySystemComponent(ASC, Level)
+        #ActiveOnGivenAbilities TArray~TSubclassOf URPGGameplayAbility~
+        #ReactiveAbilities TArray~TSubclassOf URPGGameplayAbility~
+        #StartUpGameplayEffect TArray~TSubclassOf UGameplayEffect~
+        #GrantAbilities(Abilities, ASC, Level)
+    }
+    
+    class UDataAsset_PlayerStartUpData {
+        +GiveToAbilitySystemComponent(ASC, Level)
+        -PlayerStartUpAbilitySet TArray~FRPGPlayerAbilitySet~
+    }
+    
+    class UDataAsset_EnemyStartUpData {
+    }
+    
+    class UDataAsset_CharacterConfig {
+        +ApplyAttributesToASC(ASC, Level)
+        +CharacterName FName
+        +CharacterClass ERPGCharacterClass
+        +CharacterDescription FText
+        +BaseAttributes FCharacterBaseAttributes
+    }
+    
+    class UDataAsset_EnemyConfig {
+        +ApplyAttributesToASC(ASC, Level)
+        +EnemyName FName
+        +EnemyType EEnemyType
+        +EnemyDescription FText
+        +BaseAttributes FEnemyBaseAttributes
+    }
+    
+    class FRPGPlayerAbilitySet {
+        +InputTag FGameplayTag
+        +AbilityToGrant TSubclassOf~URPGPlayerGameplayAbility~
+        +IsValid() bool
+    }
+    
+    UDataAsset_StartUpDataBase <|-- UDataAsset_PlayerStartUpData
+    UDataAsset_StartUpDataBase <|-- UDataAsset_EnemyStartUpData
+    UDataAsset_PlayerStartUpData --> FRPGPlayerAbilitySet
+```
+
+**图4.18 数据资产继承类图**
+
+## 4.12 用例图
+
+### 4.12.1 玩家核心用例
+
+```mermaid
+graph LR
+    subgraph 玩家角色
         Player((玩家))
     end
     
-    subgraph 核心功能
-        UC1[控制角色移动]
-        UC2[执行攻击动作]
-        UC3[查看HUD信息]
-        UC4[打开主菜单]
+    subgraph 战斗系统
+        UC1[装备武器]
+        UC2[卸下武器]
+        UC3[轻击攻击]
+        UC4[重击攻击]
+        UC5[连招组合]
+        UC6[翻滚闪避]
+        UC7[跳跃]
     end
     
-    subgraph 菜单功能
-        UC5[调整游戏设置]
-        UC6[开始新游戏]
-        UC7[退出游戏]
+    subgraph 角色系统
+        UC8[受到伤害]
+        UC9[死亡与复活]
+        UC10[无敌状态]
     end
     
-    subgraph 角色管理
-        UC8[复活角色]
-        UC9[装备武器]
+    subgraph UI系统
+        UC11[查看血条]
+        UC12[打开游戏菜单]
+        UC13[查看敌人血条]
     end
     
     Player --> UC1
     Player --> UC2
     Player --> UC3
     Player --> UC4
+    Player --> UC5
+    Player --> UC6
+    Player --> UC7
     Player --> UC8
     Player --> UC9
-    
+    Player --> UC10
+    Player --> UC11
+    Player --> UC12
+    Player --> UC13
+    UC3 --> UC5
     UC4 --> UC5
-    UC4 --> UC6
-    UC4 --> UC7
-    UC1 -.包含.-> UC3
 ```
 
-**图4.14 玩家用例图**
+**图4.19 玩家核心用例图**
 
-### 4.5.2 AI敌人用例图
-
-```mermaid
-graph TB
-    subgraph 外部触发
-        Player((玩家))
-    end
-    
-    subgraph AI行为
-        UC1[巡逻行为]
-        UC2[感知玩家]
-        UC3[追逐玩家]
-        UC4[攻击玩家]
-        UC5[逃跑行为]
-        UC6[死亡处理]
-    end
-    
-    subgraph 死亡逻辑
-        UC7[播放死亡动画]
-        UC8[生成掉落物]
-        UC9[销毁AI角色]
-    end
-    
-    Player -.触发.-> UC2
-    UC2 --> UC3
-    UC3 --> UC4
-    UC4 -.低血量.-> UC5
-    UC4 -.死亡.-> UC6
-    UC6 --> UC7
-    UC6 --> UC8
-    UC6 --> UC9
-    UC1 --> UC2
-```
-
-**图4.15 AI敌人用例图**
-
-### 4.5.3 系统管理用例图
-
-```mermaid
-graph TB
-    subgraph 系统组件
-        System((系统))
-    end
-    
-    subgraph UI管理
-        UC1[管理UI生命周期]
-        UC2[显示HUD]
-        UC3[切换菜单界面]
-    end
-    
-    subgraph 数据管理
-        UC4[管理健康数据]
-        UC5[管理法力值数据]
-        UC6[同步属性变化]
-    end
-    
-    subgraph 动画管理
-        UC7[管理动画状态]
-        UC8[播放动画蒙太奇]
-        UC9[处理根运动同步]
-    end
-    
-    subgraph AI管理
-        UC10[管理AI行为树]
-        UC11[更新黑板数据]
-        UC12[处理AI感知]
-    end
-    
-    System --> UC1
-    System --> UC4
-    System --> UC7
-    System --> UC10
-    
-    UC1 --> UC2
-    UC1 --> UC3
-    UC4 --> UC5
-    UC4 --> UC6
-    UC7 --> UC8
-    UC7 --> UC9
-    UC10 --> UC11
-    UC10 --> UC12
-```
-
-**图4.16 系统管理用例图**
-
-## 4.6 系统整体架构图
-
-### 4.6.1 完整系统架构图
-
-```mermaid
-graph TB
-    subgraph 表现层_Presentation
-        HUD[URPGHUDWidget<br/>HUD显示]
-        MM[URPGMainMenuWidget<br/>主菜单]
-        EHB[RPGEnemyHealthBarWidget<br/>敌人血条]
-    end
-    
-    subgraph 控制层_Control
-        PC[ARPGPlayerController<br/>玩家控制器]
-        EAC[ARPGEnemyAIController<br/>AI控制器]
-        BC[ARPGBaseController<br/>控制器基类]
-    end
-    
-    subgraph 逻辑层_Logic
-        subgraph UI桥接层
-            PUI[URPGPlayerUIComponent<br/>玩家UI桥接]
-            EUI[URPGEnemyUIComponent<br/>敌人UI桥接]
-            PUIComp[UPawnUIComponent<br/>UI桥接基类]
-        end
-        
-        subgraph 健康系统层
-            PHC[URPGPlayerHealthComponent<br/>玩家健康]
-            EHC[URPGEnemyHealthComponent<br/>敌人健康]
-            HC[URPGHealthComponent<br/>健康基类]
-        end
-        
-        subgraph 动画系统层
-            CAI[URPGCharacterAnimInstance<br/>角色动画]
-            BAI[URPGBaseAnimInstance<br/>动画基类]
-        end
-        
-        subgraph 能力系统层
-            ASC[URPGAbilitySystemComponent<br/>能力系统]
-            AS[URPGAttributeSet<br/>属性集]
-        end
-    end
-    
-    subgraph 数据层_Data
-        PS[ARPGPlayerState<br/>玩家状态]
-        GM[ARPGGameModeBase<br/>游戏模式]
-        GI[URPGGameInstance<br/>游戏实例]
-    end
-    
-    subgraph 基础设施层_Infrastructure
-        UIS[URPGUIManagerSubsystem<br/>UI管理器]
-        NS[UNavigationSystem<br/>导航系统]
-        IS[UEnhancedInputComponent<br/>输入系统]
-        AP[UAIPerceptionComponent<br/>AI感知]
-    end
-    
-    HUD --> PUI
-    MM --> UIS
-    EHB --> EUI
-    PC --> PUI
-    PC --> CAI
-    EAC --> EHC
-    EAC --> AP
-    PUI --> HC
-    PUIComp --> PUI
-    EUI --> PUIComp
-    PHC --> HC
-    EHC --> HC
-    HC --> AS
-    ASC --> AS
-    CAI --> BAI
-    PS --> PUI
-    PS --> ASC
-    GM --> UIS
-    GI --> UIS
-    UIS --> HUD
-    UIS --> MM
-    PC --> IS
-    EAC --> NS
-```
-
-**图4.17 系统完整架构图**
-
-### 4.6.2 数据流图
+### 4.12.2 敌人AI用例
 
 ```mermaid
 graph LR
-    subgraph 输入流
-        Input[玩家输入]
-        PC[PlayerController]
+    subgraph AI系统
+        Enemy((敌人AI))
     end
     
-    subgraph 处理流
-        Anim[动画系统]
-        Health[健康系统]
-        AI[AI系统]
+    subgraph 感知行为
+        UC1[感知玩家]
+        UC2[丢失目标]
+        UC3[更新最近目标]
     end
     
-    subgraph 输出流
-        UI[UI显示]
-        Render[渲染输出]
+    subgraph 战斗行为
+        UC4[近战攻击]
+        UC5[远程攻击]
+        UC6[侧移走位]
+        UC7[面向目标旋转]
     end
     
-    Input --> PC
-    PC --> Anim
-    PC --> Health
-    PC --> AI
-    Anim --> Render
-    Health --> UI
-    AI --> Render
-    UI --> Render
+    subgraph 巡逻行为
+        UC8[随机巡逻]
+        UC9[等待]
+    end
+    
+    subgraph 状态响应
+        UC10[受击反应]
+        UC11[死亡处理]
+        UC12[播放死亡动画]
+    end
+    
+    Enemy --> UC1
+    Enemy --> UC2
+    Enemy --> UC3
+    Enemy --> UC4
+    Enemy --> UC5
+    Enemy --> UC6
+    Enemy --> UC7
+    Enemy --> UC8
+    Enemy --> UC9
+    Enemy --> UC10
+    Enemy --> UC11
+    UC11 --> UC12
 ```
 
-**图4.18 系统数据流图**
+**图4.20 敌人AI用例图**
 
-## 4.7 关键交互流程详细设计
+## 4.13 系统架构图
 
-### 4.7.1 玩家受击完整流程时序图
+### 4.13.1 完整模块关系架构
 
 ```mermaid
-sequenceDiagram
-    participant Enemy as RPGEnemyCharacter
-    participant Player as RPGPlayerCharacter
-    participant Health as URPGPlayerHealthComponent
-    participant ASC as UAbilitySystemComponent
-    participant PUI as URPGPlayerUIComponent
-    participant HUD as URPGHUDWidget
-    
-    Enemy->>Enemy: Execute Attack Animation
-    Enemy->>Enemy: Trigger Attack Hit Notify
-    Enemy->>Player: Apply Damage(10.0f)
-    Player->>ASC: ExecuteGameplayEffect(DamageEffect)
-    ASC->>ASC: ModifyAttribute(Health, -10.0f)
-    ASC->>Health: OnHealthAttributeChanged Callback
-    Health->>Health: Update CurrentHealth
-    Health->>Health: OnHealthChanged.Broadcast(NewHealth, OldHealth)
-    Health->>PUI: OnHealthChanged Callback
-    PUI->>PUI: Process Health Data
-    PUI->>PUI: OnHealthChangedForUI.Broadcast(NewHealth, OldHealth)
-    PUI->>HUD: OnHealthChangedForUI Callback
-    HUD->>HUD: UpdateHealth(NewHealth, MaxHealth)
-    HUD->>HUD: HealthBar->SetPercent(HealthPercent)
-    HUD->>HUD: HealthText->SetText(HealthString)
-    alt Health <= 0
-        Health->>Health: StartDeath()
-        Health->>PUI: OnDeathStarted.Broadcast()
-        PUI->>HUD: Show Death Screen
+graph TB
+    subgraph 控制器层
+        PC[ARPGPlayerController]
+        AIC[ARPGEnemyAIController]
     end
+    
+    subgraph 角色层
+        PlayerChar[ARPGPlayerCharacter]
+        EnemyChar[ARPGEnemyCharacter]
+        BaseChar[ABaseCharacter]
+    end
+    
+    subgraph 组件层
+        PawnExt[UPawnExtensionComponentBase]
+        HealthComp[URPGHealthComponent]
+        CombatComp[UPawnCombatComponent]
+        UIComp[UPawnUIComponent]
+        InputComp[URPGEnhancedInputComponent]
+    end
+    
+    subgraph GAS层
+        ASC[URPGAbilitySystemComponent]
+        AttrSet[URPGAttributeSet]
+        Abilities[URPGGameplayAbility]
+        Effects[GameplayEffects]
+    end
+    
+    subgraph 武器系统
+        WeaponBase[ARPGWeaponBase]
+        PlayerWeapon[ARPGPlayerWeapon]
+        EnemyWeapon[ARPGEnemyWeapon]
+    end
+    
+    subgraph 数据资产层
+        StartUpData[UDataAsset_StartUpDataBase]
+        InputConfig[UDataAsset_InputConfig]
+        CharConfig[UDataAsset_CharacterConfig]
+        EnemyConfig[UDataAsset_EnemyConfig]
+    end
+    
+    subgraph UI层
+        UIManager[URPGUIManagerSubsystem]
+        HUD[URPGHUDWidget]
+        EnemyBar[URPGEnemyHealthBarWidget]
+    end
+    
+    subgraph AI层
+        BT[BehaviorTree]
+        BB[Blackboard]
+        Perception[AIPerception]
+    end
+    
+    PC --> PlayerChar
+    AIC --> EnemyChar
+    BaseChar --> PlayerChar
+    BaseChar --> EnemyChar
+    
+    PlayerChar --> PawnExt
+    PlayerChar --> HealthComp
+    PlayerChar --> CombatComp
+    PlayerChar --> UIComp
+    PlayerChar --> InputComp
+    
+    EnemyChar --> HealthComp
+    EnemyChar --> CombatComp
+    EnemyChar --> UIComp
+    
+    PlayerChar --> ASC
+    ASC --> AttrSet
+    ASC --> Abilities
+    Abilities --> Effects
+    
+    CombatComp --> WeaponBase
+    WeaponBase --> PlayerWeapon
+    WeaponBase --> EnemyWeapon
+    
+    StartUpData --> ASC
+    InputConfig --> InputComp
+    CharConfig --> Effects
+    EnemyConfig --> Effects
+    
+    UIComp --> UIManager
+    UIManager --> HUD
+    UIManager --> EnemyBar
+    
+    AIC --> BT
+    AIC --> BB
+    AIC --> Perception
 ```
 
-**图4.19 玩家受击完整流程时序图**
+**图4.21 系统完整模块关系架构图**
 
-### 4.7.2 UI界面切换时序图
+## 4.14 配置表
 
-```mermaid
-sequenceDiagram
-    participant Player as Player
-    participant PC as RPGPlayerController
-    participant UIS as URPGUIManagerSubsystem
-    participant HUD as URPGHUDWidget
-    participant MM as URPGMainMenuWidget
-    
-    Player->>PC: Press Escape Key
-    PC->>UIS: ShowMainMenu()
-    UIS->>UIS: PushWidgetToLayerStack(MenuLayer, MainMenu)
-    UIS->>MM: ActivateWidget()
-    MM->>MM: NativeOnActivated()
-    MM->>MM: BlockInput(GameLayer)
-    Note over PC,MM: HUD仍然显示但输入被屏蔽
-    
-    Player->>MM: Click "Resume" Button
-    MM->>UIS: HideMainMenu()
-    UIS->>MM: DeactivateWidget()
-    MM->>MM: NativeOnDeactivated()
-    MM->>MM: RestoreInput(GameLayer)
-    UIS->>UIS: Pop Widget from MenuLayer
-    Note over PC,MM: HUD恢复输入响应
-```
+### 4.14.1 玩家属性配置表（FCharacterBaseAttributes）
 
-**图4.20 UI界面切换时序图**
+| 属性分类 | 属性名 | 类型 | 默认值 | 说明 |
+|---------|--------|------|--------|------|
+| Primary | Strength | float | 10.0 | 力量，影响物理攻击力 |
+| Primary | Intelligence | float | 10.0 | 智力，影响魔法攻击力/法力值 |
+| Primary | Vitality | float | 10.0 | 体质，影响生命值 |
+| Primary | Agility | float | 10.0 | 敏捷，影响闪避/暴击 |
+| Secondary | Armor | float | 0.0 | 护甲，减少物理伤害 |
+| Secondary | CriticalHitChance | float | 5.0 | 暴击率(0-100) |
+| Secondary | CriticalHitDamage | float | 1.5 | 暴击伤害倍数(最小1.0) |
+| Secondary | HealthRegeneration | float | 0.0 | 生命恢复/秒 |
+| Secondary | ManaRegeneration | float | 0.0 | 法力恢复/秒 |
+| Vital | MaxHealth | float | 100.0 | 最大生命值(最小1.0) |
+| Vital | MaxRage | float | 50.0 | 最大怒气值(最小1.0) |
+| Vital | MaxMana | float | 80.0 | 最大法力值(最小1.0) |
+| Vital | AttackPower | float | 10.0 | 攻击力 |
+| Vital | DefensePower | float | 5.0 | 防御力 |
 
-## 4.8 配置与资源管理详细设计
+### 4.14.2 敌人属性配置表（FEnemyBaseAttributes）
 
-### 4.8.1 输入映射配置表
+| 属性分类 | 属性名 | 类型 | 默认值 | 说明 |
+|---------|--------|------|--------|------|
+| Vital | MaxHealth | float | 100.0 | 最大生命值 |
+| Combat | AttackPower | float | 10.0 | 攻击力 |
+| Combat | DefensePower | float | 5.0 | 防御力 |
+| Resistance | Armor | float | 0.0 | 护甲减伤 |
+| Resistance | MagicResistance | float | 0.0 | 魔法抗性 |
+| Resistance | StaggerResistance | float | 0.0 | 硬直抗性（类魂机制） |
+| Resistance | PoisonResistance | float | 0.0 | 毒素抗性 |
+| Resistance | BleedResistance | float | 0.0 | 流血抗性 |
+| Drop | GoldDrop | int32 | 10 | 击杀掉落金币 |
+| Drop | EXPDrop | int32 | 50 | 击杀掉落经验 |
 
-| Input Action | 类型 | 键位映射 | 修饰符 | 触发器 |
-|-------------|------|---------|-------|-------|
-| Move | Axis2D | WASD / Left Stick | Dead Zone, Scale | Triggered |
-| Jump | Boolean | Space / Face Button Bottom | None | Pressed |
-| Attack | Boolean | Mouse Left / Right Trigger | None | Pressed |
-| Menu | Boolean | Escape / Start | None | Pressed |
+### 4.14.3 GAS运行时属性配置表（URPGAttributeSet）
 
-### 4.8.2 健康属性配置表
+| 属性分类 | 属性名 | 网络同步 | 说明 |
+|---------|--------|---------|------|
+| Primary | Strength | Replicated | 力量 |
+| Primary | Intelligence | Replicated | 智力 |
+| Primary | Vitality | Replicated | 体质 |
+| Primary | Agility | Replicated | 敏捷 |
+| Secondary | Armor | Replicated | 护甲 |
+| Secondary | CriticalHitChance | Replicated | 暴击率 |
+| Secondary | CriticalHitDamage | Replicated | 暴击伤害 |
+| Secondary | HealthRegeneration | Replicated | 生命恢复 |
+| Secondary | ManaRegeneration | Replicated | 法力恢复 |
+| Vital | CurrentHealth | Replicated | 当前生命值 |
+| Vital | MaxHealth | Replicated | 最大生命值 |
+| Vital | CurrentRage | Replicated | 当前怒气值 |
+| Vital | MaxRage | Replicated | 最大怒气值 |
+| Vital | CurrentMana | Replicated | 当前法力值 |
+| Vital | MaxMana | Replicated | 最大法力值 |
+| Meta | DamageTaken | 非同步 | 受到伤害（临时计算用） |
+| Meta | IncomingXP | 非同步 | 获得经验（临时计算用） |
+| Meta | AttackPower | Replicated | 攻击力（兼容保留） |
+| Meta | DefensePower | Replicated | 防御力（兼容保留） |
 
-| 属性名 | 类型 | 初始值 | 最小值 | 最大值 | 说明 |
-|-------|------|-------|-------|-------|------|
-| Health | Float | 100.0 | 0.0 | 999.0 | 当前生命值 |
-| MaxHealth | Float | 100.0 | 1.0 | 999.0 | 最大生命值 |
-| Mana | Float | 50.0 | 0.0 | 999.0 | 当前法力值 |
-| MaxMana | Float | 50.0 | 1.0 | 999.0 | 最大法力值 |
+### 4.14.4 GameplayTags配置表
 
-### 4.8.3 UI层栈配置表
+| 标签分类 | 标签名 | 用途 |
+|---------|--------|------|
+| Input | InputTag_Move | 移动输入 |
+| Input | InputTag_Look | 视角输入 |
+| Input | InputTag_EquipSword | 装备剑输入 |
+| Input | InputTag_UnequipSword | 卸下剑输入 |
+| Input | InputTag_LightAttack_Sword | 剑轻击输入 |
+| Input | InputTag_HeavyAttack_Sword | 剑重击输入 |
+| Input | InputTag_Roll | 翻滚输入 |
+| Input | InputTag_Jump | 跳跃输入 |
+| Player.Ability | Player_Ability_Equip_Sword | 装备剑能力 |
+| Player.Ability | Player_Ability_Unequip_Sword | 卸下剑能力 |
+| Player.Ability | Player_Ability_Attack_Light_Sword | 剑轻击能力 |
+| Player.Ability | Player_Ability_Attack_Heavy_Sword | 剑重击能力 |
+| Player.Ability | Player_Ability_HitPause | 顿帧能力 |
+| Player.Ability | Player_Ability_Roll | 翻滚能力 |
+| Player.Ability | Player_Ability_Jump | 跳跃能力 |
+| Player.Weapon | Player_Weapon_Sword | 剑武器标识 |
+| Player.Event | Player_Event_Equip_Sword | 装备剑事件 |
+| Player.Event | Player_Event_Unequip_Sword | 卸下剑事件 |
+| Player.Event | Player_Event_HitPause | 顿帧事件 |
+| Player.Event | Player_Event_Jump_Finished | 跳跃结束事件 |
+| Player.Status | Player_Status_JumpToFinish | 跳跃即将结束 |
+| Player.Status | Player_Status_Jumping | 跳跃中 |
+| Player.Status | Player_Status_Rolling | 翻滚中 |
+| Player.SetByCaller | Player_SetByCaller_AttackType_Light | 轻击类型标记 |
+| Player.SetByCaller | Player_SetByCaller_AttackType_Heavy | 重击类型标记 |
+| Enemy.Ability | Enemy_Ability_Melee | 敌人近战能力 |
+| Enemy.Ability | Enemy_Ability_Ranged | 敌人远程能力 |
+| Enemy.Weapon | Enemy_Weapon | 敌人武器标识 |
+| Enemy.Status | Enemy_Status_Strafing | 敌人侧移状态 |
+| Enemy.Status | Enemy_Status_UnderAttack | 敌人受击状态 |
+| Shared.Ability | Shared_Ability_HitReact | 受击反应能力 |
+| Shared.Ability | Shared_Ability_Death | 死亡能力 |
+| Shared.Event | Shared_Event_MeleeHit | 近战命中事件 |
+| Shared.Event | Shared_Event_HitReact | 受击反应事件 |
+| Shared.Event | Shared_Event_ComboWindow_Open | 连招窗口开启 |
+| Shared.Event | Shared_Event_ComboWindow_Close | 连招窗口关闭 |
+| Shared.Event | Shared_Event_Melee_CollisionEnable | 近战碰撞开启 |
+| Shared.Event | Shared_Event_Melee_CollisionDisable | 近战碰撞关闭 |
+| Shared.SetByCaller | Shared_SetByCaller_BaseDamage | 基础伤害值 |
+| Shared.Status | Shared_Status_Dead | 死亡状态 |
+| Shared.Status | Shared_Status_HitReact_Front | 正面受击 |
+| Shared.Status | Shared_Status_HitReact_Back | 背面受击 |
+| Shared.Status | Shared_Status_HitReact_Left | 左侧受击 |
+| Shared.Status | Shared_Status_HitReact_Right | 右侧受击 |
+| UI | RPGCommonUI_WidgetStack_Modal | 模态弹窗层 |
+| UI | RPGCommonUI_WidgetStack_GameMenu | 游戏菜单层 |
+| UI | RPGCommonUI_WidgetStack_GameHUD | 游戏HUD层 |
+| UI | RPGCommonUI_WidgetStack_Frontend | 前端界面层 |
 
-| 层级 | Widget类型 | 输入屏蔽 | 显示时机 | 移除时机 |
-|------|-----------|---------|---------|---------|
-| Game | URPGHUDWidget | 否 | 游戏开始 | 游戏结束 |
-| Menu | URPGMainMenuWidget | 是 | 按Escape | 点击Resume/Exit |
-| Modal | 设置/确认对话框 | 是 | 点击设置按钮 | 点击关闭按钮 |
-| Overlay | 加载提示/通知 | 否 | 触发事件 | 事件结束 |
+### 4.14.5 枚举类型配置表
+
+| 枚举名 | 枚举值 | 说明 |
+|--------|--------|------|
+| ERPGWeaponType | None/Sword1H/Sword2H/Bow/Staff/DualBlade/Spear | 武器类型 |
+| ERPGCharacterClass | None/RPG(战士)/Mage/Archer/Assassin/Paladin | 角色职业 |
+| ERPGCombatState | Idle/Combat/Attacking/Blocking/Dodging/Stunned/Dead | 战斗状态 |
+| ERPGComboType | LightAttack/HeavyAttack | 连招攻击类型通道 |
+| EEnemyType | Normal/Elite/Boss/Minion | 敌人类型 |
+| EEnemyHitReactDirection | Front/Back/Left/Right | 敌人受击方向 |
+| ERPGConfirmType | Yes/No | 通用确认类型 |
+| ERPGValidType | Valid/InValid | 通用有效性类型 |
+| ERPGSuccessType | Successful/Failed | 通用成功类型 |

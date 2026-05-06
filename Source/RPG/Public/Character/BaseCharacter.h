@@ -7,6 +7,7 @@
 #include "AbilitySystemInterface.h"
 #include "Interface/PawnCombatInterface.h"
 #include "Interface/PawnUIInterface.h"
+#include "Interface/PawnDeathInterface.h"
 #include "BaseCharacter.generated.h"
 
 class URPGAttributeSet;
@@ -17,7 +18,7 @@ class URPGEnemyUIComponent;
 class UMotionWarpingComponent;
 
 UCLASS()
-class RPG_API ABaseCharacter : public ACharacter, public IAbilitySystemInterface, public IPawnCombatInterface, public IPawnUIInterface
+class RPG_API ABaseCharacter : public ACharacter, public IAbilitySystemInterface, public IPawnCombatInterface, public IPawnUIInterface, public IPawnDeathInterface
 {
 	GENERATED_BODY()
 
@@ -33,6 +34,10 @@ public:
 	// IPawnUIInterface implementation
 	virtual URPGPlayerUIComponent* GetPlayerUIComponent() override { return nullptr; }
 	virtual URPGEnemyUIComponent* GetEnemyUIComponent() override { return nullptr; }
+	
+	// IPawnDeathInterface implementation
+	virtual void OnDeathStarted_Implementation() override;
+	virtual void OnDeathFinished_Implementation() override;
 	
 	UAttributeSet* GetAttributeSet() const { return AttributeSet; }
 	

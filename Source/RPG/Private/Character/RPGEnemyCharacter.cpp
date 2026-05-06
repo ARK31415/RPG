@@ -95,8 +95,8 @@ void ARPGEnemyCharacter::PossessedBy(AController* NewController)
 		CachedAIController = AIController;
 		AIController->RunBehaviorTreeWithBlackboard(EnemyBehaviorTree);
 
-		UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[%s] PossessedBy - AI控制器[%s]已接管，行为树[%s]已启动"),
-			*GetName(), *AIController->GetName(), *EnemyBehaviorTree->GetName());
+		/*UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[%s] PossessedBy - AI控制器[%s]已接管，行为树[%s]已启动"),
+			*GetName(), *AIController->GetName(), *EnemyBehaviorTree->GetName());*/
 	}
 	else if (!EnemyBehaviorTree)
 	{
@@ -132,13 +132,13 @@ void ARPGEnemyCharacter::InitializeEnemyConfig()
 	// 应用敌人属性到 ASC
 	EnemyConfig->ApplyAttributesToASC(RPGAbilitySystemComponent, 1);
 
-	UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[%s] InitializeEnemyConfig - 敌人属性已应用到 ASC, Config=[%s]"),
-		*GetName(), *EnemyConfig->GetName());
+	/*UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[%s] InitializeEnemyConfig - 敌人属性已应用到 ASC, Config=[%s]"),
+		*GetName(), *EnemyConfig->GetName());*/
 }
 
-void ARPGEnemyCharacter::Die()
+void ARPGEnemyCharacter::OnDeathStarted_Implementation()
 {
-	UE_LOG(LogRPGEnemyCharacter, Warning, TEXT("[Enemy] Die() called on %s"), *GetName());
+	UE_LOG(LogRPGEnemyCharacter, Warning, TEXT("[Enemy] OnDeathStarted() called on %s"), *GetName());
 
 	// 1. 设置死亡Tag
 	if (RPGAbilitySystemComponent)
@@ -189,8 +189,18 @@ void ARPGEnemyCharacter::Die()
 	{
 		UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[Enemy] Playing death animation via AnimBlueprint"));
 	}
+}
 
-	// 7. 设置自动销毁时间(5秒)
-	SetLifeSpan(5.0f);
-	UE_LOG(LogRPGEnemyCharacter, Warning, TEXT("[Enemy] SetLifeSpan(5.0s), will be destroyed automatically"));
+void ARPGEnemyCharacter::OnDeathFinished_Implementation()
+{
+	UE_LOG(LogRPGEnemyCharacter, Warning, TEXT("[Enemy] OnDeathFinished() called on %s"), *GetName());
+
+	// TODO: 敌人死亡后的逻辑
+	// 1. 掉落物品
+	// 2. 给予经验值
+	// 3. 播放音效
+	
+	// 设置自动销毁时间(3秒)
+	SetLifeSpan(3.0f);
+	UE_LOG(LogRPGEnemyCharacter, Warning, TEXT("[Enemy] SetLifeSpan(3.0s), will be destroyed automatically"));
 }

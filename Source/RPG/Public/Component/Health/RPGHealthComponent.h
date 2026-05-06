@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Component/PawnExtensionComponentBase.h"
+#include "Interface/PawnDeathInterface.h"
 #include "RPGHealthComponent.generated.h"
 
 // ========== 自定义委托声明 ==========

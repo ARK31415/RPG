@@ -47,13 +47,6 @@ public:
 	UFUNCTION(BlueprintPure, Category = "RPG|AbilitySystem")
 	URPGAttributeSet* GetRPGAttributeSet() const { return RPGAttributeSet; }
 
-	/**
-	 * 敌人死亡处理
-	 * 设置死亡Tag、禁用AI和战斗组件、播放死亡动画、延迟销毁
-	 */
-	UFUNCTION(BlueprintCallable, Category = "RPG|Enemy")
-	virtual void Die();
-
 protected:
 	virtual void BeginPlay() override;
 
@@ -95,4 +88,8 @@ private:
 
 public:
 	FORCEINLINE UEnemyCombatComponent* GetEnemyCombatComponent() const{return EnemyCombatComponent;}
+	
+	// IPawnDeathInterface implementation
+	virtual void OnDeathStarted_Implementation() override;
+	virtual void OnDeathFinished_Implementation() override;
 };

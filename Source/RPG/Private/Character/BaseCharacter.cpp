@@ -22,6 +22,18 @@ UPawnCombatComponent* ABaseCharacter::GetPawnCombatComponent() const
 	return nullptr;
 }
 
+void ABaseCharacter::OnDeathStarted_Implementation()
+{
+	// 默认空实现，由子类重写（玩家/敌人有不同的死亡逻辑）
+	UE_LOG(LogTemp, Log, TEXT("[BaseCharacter] OnDeathStarted - Default implementation, should be overridden"));
+}
+
+void ABaseCharacter::OnDeathFinished_Implementation()
+{
+	// 默认空实现，由子类重写（玩家/敌人有不同的死亡逻辑）
+	UE_LOG(LogTemp, Log, TEXT("[BaseCharacter] OnDeathFinished - Default implementation, should be overridden"));
+}
+
 // Called when the game starts or when spawned
 void ABaseCharacter::BeginPlay()
 {
