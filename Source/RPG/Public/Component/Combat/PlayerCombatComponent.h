@@ -31,8 +31,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category="RPG|Combat")
 	float GetPlayerCurrentEquippedWeaponDamageAtLevel(float InLeveL) const;
 
-	virtual void OnHitTargetActor(AActor* HitActor) override;
-	virtual void OnWeaponPullerFromTargetActor(AActor* InteractedActor) override;
+	virtual void OnHitTargetActor(ARPGWeaponBase* Weapon, AActor* HitActor) override;
+	virtual void OnWeaponPullerFromTargetActor(ARPGWeaponBase* Weapon, AActor* InteractedActor) override;
 
 	// 连招状态管理（按攻击类型分通道）
 	UFUNCTION(BlueprintCallable, Category="RPG|Combo")

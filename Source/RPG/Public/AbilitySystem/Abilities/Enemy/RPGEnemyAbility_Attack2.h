@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AbilitySystem/Abilities/Enemy/RPGAbility_EnemyAttackCombo.h"
+#include "AbilitySystem/Abilities/Enemy/RPGEnemyAbility_AttackCombo.h"
 #include "RPGEnemyAbility_Attack2.generated.h"
 
 /**
@@ -11,7 +11,7 @@
  * TODO: 具体实现待敌人系统完善后补充
  */
 UCLASS()
-class RPG_API URPGEnemyAbility_Attack2 : public URPGAbility_EnemyAttackCombo
+class RPG_API URPGEnemyAbility_Attack2 : public URPGEnemyAbility_AttackCombo
 {
 	GENERATED_BODY()
 

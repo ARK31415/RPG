@@ -36,7 +36,7 @@ void ARPGWeaponBase::OnCollisionBoxBeginOverlap(UPrimitiveComponent* OverlappedC
 	{
 		if(URPGFunctionLibrary::IsTargetPawnHostile(WeaponOwingPawn, HitPawn))
 		{
-			OnWeaponHitTarget.ExecuteIfBound(OtherActor);
+			OnWeaponHitTarget.Broadcast(this, OtherActor);
 		}
 	}
 }
@@ -51,7 +51,7 @@ void ARPGWeaponBase::OnCollisionBoxEndOverlap(UPrimitiveComponent* OverlappedCom
 	{
 		if(URPGFunctionLibrary::IsTargetPawnHostile(WeaponOwingPawn, HitPawn))
 		{
-			OnWeaponPulledFromTarget.ExecuteIfBound(OtherActor);
+			OnWeaponPulledFromTarget.Broadcast(this, OtherActor);
 		}
 	}
 }

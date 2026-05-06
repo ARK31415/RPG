@@ -50,6 +50,9 @@ namespace RPGGameplayTags
 	//Shared Tags
 	UE_DEFINE_GAMEPLAY_TAG(Shared_Ability_HitReact, "Shared.Ability.HitReact");
 	UE_DEFINE_GAMEPLAY_TAG(Shared_Ability_Death, "Shared.Ability.Death");
+
+	//Shared Death Event Tag
+	UE_DEFINE_GAMEPLAY_TAG(Shared_Event_Death, "Shared.Event.Death");
 	//Shared Event Tags
 	UE_DEFINE_GAMEPLAY_TAG(Shared_Event_MeleeHit, "Shared.Event.MeleeHit");
 	UE_DEFINE_GAMEPLAY_TAG(Shared_Event_HitReact, "Shared.Event.HitReact");

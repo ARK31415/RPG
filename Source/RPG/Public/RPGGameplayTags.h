@@ -51,6 +51,9 @@ namespace RPGGameplayTags
 	//Shared Tags
 	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Shared_Ability_HitReact);
 	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Shared_Ability_Death);
+
+	//Shared Death Event Tag (used to trigger Death GA via GameplayEvent)
+	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Shared_Event_Death);
 	//Shared Event Tags
 	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Shared_Event_MeleeHit);
 	RPG_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Shared_Event_HitReact);

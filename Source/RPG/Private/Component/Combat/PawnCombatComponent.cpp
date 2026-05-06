@@ -13,8 +13,8 @@ void UPawnCombatComponent::RegisterSpawnWeapon(FGameplayTag InWeaponTagToRegiste
 
 	CharacterCarriedWeaponMap.Emplace(InWeaponTagToRegister,InWeaponToRegister);
 
-	InWeaponToRegister->OnWeaponHitTarget.BindUObject(this, &ThisClass::OnHitTargetActor);
-	InWeaponToRegister->OnWeaponPulledFromTarget.BindUObject(this, &ThisClass::OnWeaponPullerFromTargetActor);
+	InWeaponToRegister->OnWeaponHitTarget.AddUObject(this, &ThisClass::OnHitTargetActor);
+	InWeaponToRegister->OnWeaponPulledFromTarget.AddUObject(this, &ThisClass::OnWeaponPullerFromTargetActor);
 
 	if(bRegisterAsEquippedWeapon)
 	{
@@ -69,12 +69,12 @@ void UPawnCombatComponent::ToggleWeaponCollision(bool bShouldEnable, EToggleDama
 	}
 }
 
-void UPawnCombatComponent::OnHitTargetActor(AActor* HitActor)
+void UPawnCombatComponent::OnHitTargetActor(ARPGWeaponBase* Weapon, AActor* HitActor)
 {
 	
 }
 
-void UPawnCombatComponent::OnWeaponPullerFromTargetActor(AActor* InteractedActor)
+void UPawnCombatComponent::OnWeaponPullerFromTargetActor(ARPGWeaponBase* Weapon, AActor* InteractedActor)
 {
 	
 }

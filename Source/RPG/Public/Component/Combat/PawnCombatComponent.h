@@ -38,12 +38,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category="RPG|Weapon")
 	void ToggleWeaponCollision(bool bShouldEnable, EToggleDamageType ToggleDamageType = EToggleDamageType::CurrentEquippedWeapon);
 
-	virtual void OnHitTargetActor(AActor* HitActor);
-	virtual void OnWeaponPullerFromTargetActor(AActor* InteractedActor);
+	virtual void OnHitTargetActor(ARPGWeaponBase* Weapon, AActor* HitActor);
+	virtual void OnWeaponPullerFromTargetActor(ARPGWeaponBase* Weapon, AActor* InteractedActor);
 
 protected:
 	UPROPERTY()
-	TArray<AActor*> OverlappedActors;
+	TSet<TObjectPtr<AActor>> OverlappedActors;
 
 private:
 	TMap<FGameplayTag, ARPGWeaponBase*> CharacterCarriedWeaponMap;

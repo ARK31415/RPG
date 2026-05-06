@@ -12,12 +12,18 @@ struct FRPGDamageCapture
 	DECLARE_ATTRIBUTE_CAPTUREDEF(AttackPower)
 	DECLARE_ATTRIBUTE_CAPTUREDEF(DefensePower)
 	DECLARE_ATTRIBUTE_CAPTUREDEF(DamageTaken)
+	DECLARE_ATTRIBUTE_CAPTUREDEF(Armor)
+	DECLARE_ATTRIBUTE_CAPTUREDEF(CriticalHitChance)
+	DECLARE_ATTRIBUTE_CAPTUREDEF(CriticalHitDamage)
 
 	FRPGDamageCapture()
 	{
-		DEFINE_ATTRIBUTE_CAPTUREDEF(URPGAttributeSet, AttackPower, Source,false);
-		DEFINE_ATTRIBUTE_CAPTUREDEF(URPGAttributeSet, DefensePower, Target,false);
-		DEFINE_ATTRIBUTE_CAPTUREDEF(URPGAttributeSet, DamageTaken, Target,false);
+		DEFINE_ATTRIBUTE_CAPTUREDEF(URPGAttributeSet, AttackPower, Source, false);
+		DEFINE_ATTRIBUTE_CAPTUREDEF(URPGAttributeSet, DefensePower, Target, false);
+		DEFINE_ATTRIBUTE_CAPTUREDEF(URPGAttributeSet, DamageTaken, Target, false);
+		DEFINE_ATTRIBUTE_CAPTUREDEF(URPGAttributeSet, Armor, Target, false);
+		DEFINE_ATTRIBUTE_CAPTUREDEF(URPGAttributeSet, CriticalHitChance, Source, false);
+		DEFINE_ATTRIBUTE_CAPTUREDEF(URPGAttributeSet, CriticalHitDamage, Source, false);
 	}
 };
 
@@ -48,6 +54,9 @@ UGEExecCale_DamageTaken::UGEExecCale_DamageTaken()
 	RelevantAttributesToCapture.Add(GetRPGDamageCapture().AttackPowerDef);
 	RelevantAttributesToCapture.Add(GetRPGDamageCapture().DefensePowerDef);
 	RelevantAttributesToCapture.Add(GetRPGDamageCapture().DamageTakenDef);
+	RelevantAttributesToCapture.Add(GetRPGDamageCapture().ArmorDef);
+	RelevantAttributesToCapture.Add(GetRPGDamageCapture().CriticalHitChanceDef);
+	RelevantAttributesToCapture.Add(GetRPGDamageCapture().CriticalHitDamageDef);
 }
 
 void UGEExecCale_DamageTaken::Execute_Implementation(const FGameplayEffectCustomExecutionParameters& ExecutionParams,
@@ -90,24 +99,47 @@ void UGEExecCale_DamageTaken::Execute_Implementation(const FGameplayEffectCustom
 	
 	float TargetDefensePower = 0.0f;
 	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(GetRPGDamageCapture().DefensePowerDef, EvaluateParameters, TargetDefensePower);
-	//Debug::Print(TEXT("TargetDefensePower"), TargetDefensePower);
-	
+
+	float TargetArmor = 0.0f;
+	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(GetRPGDamageCapture().ArmorDef, EvaluateParameters, TargetArmor);
+
+	float SourceCritChance = 0.0f;
+	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(GetRPGDamageCapture().CriticalHitChanceDef, EvaluateParameters, SourceCritChance);
+
+	float SourceCritDamage = 0.0f;
+	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(GetRPGDamageCapture().CriticalHitDamageDef, EvaluateParameters, SourceCritDamage);
+
+	// 连击加成
 	if(UsedLightAttackComboCount != 0)
 	{
-		const float DamageIncreasePercentLight = (UsedLightAttackComboCount - 1) * 0.05 + 1.f;
+		const float DamageIncreasePercentLight = (UsedLightAttackComboCount - 1) * 0.05f + 1.f;
 		BaseDamage *= DamageIncreasePercentLight;
-		//Debug::Print(TEXT("ScaledBaseDamageLight"), BaseDamage);
 	}
 
 	if(UsedHeavyAttackComboCount != 0)
 	{
-		const float DamageIncreasePercentHeavy = UsedHeavyAttackComboCount * 0.15 + 1.f;
+		const float DamageIncreasePercentHeavy = UsedHeavyAttackComboCount * 0.15f + 1.f;
 		BaseDamage *= DamageIncreasePercentHeavy;
-		//Debug::Print(TEXT("ScaledBaseDamageHeavy"), BaseDamage);
 	}
 
-	const float FinalDamageDone = BaseDamage * SourceAttackPower / TargetDefensePower;
-	//Debug::Print(TEXT("FinalDamageDone"), FinalDamageDone);
+	// 暴击判定（CriticalHitChance 为 0-100 的百分比值）
+	float CritMultiplier = 1.0f;
+	if (SourceCritChance > 0.f)
+	{
+		const float RandRoll = FMath::FRandRange(0.f, 100.f);
+		if (RandRoll <= SourceCritChance)
+		{
+			// CriticalHitDamage 表示额外倍率（如 0.5 = 150% 伤害）
+			CritMultiplier = 1.0f + FMath::Max(0.f, SourceCritDamage);
+		}
+	}
+
+	// 护甲减伤：每点护甲减少 1% 伤害，上限 80%
+	const float ArmorReduction = FMath::Clamp(TargetArmor * 0.01f, 0.f, 0.8f);
+
+	// 最终伤害 = 基础伤害 * 攻击力/防御力 * 暴击 * (1 - 护甲减伤)
+	const float DefenseFactor = (TargetDefensePower > 0.f) ? (SourceAttackPower / TargetDefensePower) : 1.f;
+	const float FinalDamageDone = BaseDamage * DefenseFactor * CritMultiplier * (1.f - ArmorReduction);
 	
 	if(FinalDamageDone > 0.f)
 	{

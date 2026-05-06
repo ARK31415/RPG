@@ -8,7 +8,8 @@
 
 class UBoxComponent;
 
-DECLARE_DELEGATE_OneParam(FOnTargetInteractDelegate, AActor*)
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnWeaponHitTargetDelegate, ARPGWeaponBase* /*Weapon*/, AActor* /*HitActor*/)
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnWeaponPulledFromTargetDelegate, ARPGWeaponBase* /*Weapon*/, AActor* /*TargetActor*/)
 
 UCLASS()
 class RPG_API ARPGWeaponBase : public AActor
@@ -18,8 +19,11 @@ public:
 	
 	ARPGWeaponBase();
 
-	FOnTargetInteractDelegate OnWeaponHitTarget;
-	FOnTargetInteractDelegate OnWeaponPulledFromTarget;
+	/** 武器命中目标事件（多播，支持多个监听者：战斗组件/音效/特效等） */
+	FOnWeaponHitTargetDelegate OnWeaponHitTarget;
+	
+	/** 武器拔出目标事件 */
+	FOnWeaponPulledFromTargetDelegate OnWeaponPulledFromTarget;
 
 protected:
 	

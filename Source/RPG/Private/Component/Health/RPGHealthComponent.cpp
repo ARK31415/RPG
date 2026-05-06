@@ -4,6 +4,7 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/RPGAttributeSet.h"
 #include "Character/BaseCharacter.h"
+#include "RPGGameplayTags.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRPGHealthComponent, Log, All)
 
@@ -121,30 +122,46 @@ void URPGHealthComponent::StartDeath()
 	
 	UE_LOG(LogRPGHealthComponent, Log, TEXT("StartDeath: %s"), *GetOwner()->GetName());
 
-	// 通知 Owner 开始死亡（通过接口）
-	if (AActor* Owner = GetOwner())
+	// 通过 GameplayEvent 触发死亡 GA（如果 ASC 存在且已授予死亡能力）
+	if (AbilitySystemComponent)
 	{
-		if (IPawnDeathInterface* DeathInterface = Cast<IPawnDeathInterface>(Owner))
+		FGameplayEventData EventData;
+		EventData.Instigator = GetOwner();
+		EventData.Target = GetOwner();
+		
+		AbilitySystemComponent->HandleGameplayEvent(
+			RPGGameplayTags::Shared_Event_Death,
+			&EventData
+		);
+		
+		UE_LOG(LogRPGHealthComponent, Log, TEXT("Sent GameplayEvent Shared.Event.Death to trigger Death GA"));
+	}
+	else
+	{
+		// Fallback: 如果没有 ASC，直接通过旧接口通知（兼容性）
+		if (AActor* Owner = GetOwner())
 		{
-			DeathInterface->Execute_OnDeathStarted(Owner);
-			UE_LOG(LogRPGHealthComponent, Log, TEXT("Notified Owner via IPawnDeathInterface::OnDeathStarted()"));
-		}
-		else
-		{
-			UE_LOG(LogRPGHealthComponent, Warning, TEXT("Owner %s does not implement IPawnDeathInterface"), *Owner->GetName());
+			if (IPawnDeathInterface* DeathInterface = Cast<IPawnDeathInterface>(Owner))
+			{
+				DeathInterface->Execute_OnDeathStarted(Owner);
+			}
 		}
 	}
 
 	// 广播死亡开始事件（供 UI 等系统订阅）
 	OnDeathStarted.Broadcast();
 
-	// 延迟后完成死亡（给动画时间）
-	GetWorld()->GetTimerManager().SetTimer(
-		DeathFinishTimerHandle,
-		this,
-		&URPGHealthComponent::FinishDeath,
-		2.0f  // 2秒后清理
-	);
+	// 注意：不再设置 FinishDeath 定时器，由 Death GA 负责控制死亡流程节奏
+	// 如果没有 Death GA（fallback），设置定时器
+	if (!AbilitySystemComponent)
+	{
+		GetWorld()->GetTimerManager().SetTimer(
+			DeathFinishTimerHandle,
+			this,
+			&URPGHealthComponent::FinishDeath,
+			2.0f
+		);
+	}
 }
 
 void URPGHealthComponent::FinishDeath()

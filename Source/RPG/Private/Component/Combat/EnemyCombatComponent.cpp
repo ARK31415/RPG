@@ -7,14 +7,14 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogEnemyCombatComponent, All, All)
 
-void UEnemyCombatComponent::OnHitTargetActor(AActor* HitActor)
+void UEnemyCombatComponent::OnHitTargetActor(ARPGWeaponBase* Weapon, AActor* HitActor)
 {
 	if (OverlappedActors.Contains(HitActor))
 	{
 		return;
 	}
 
-	OverlappedActors.AddUnique(HitActor);
+	OverlappedActors.Add(HitActor);
 
 	// TODO: 敌人命中玩家时的逻辑
 	// - 发送MeleeHit事件
@@ -33,7 +33,7 @@ void UEnemyCombatComponent::OnHitTargetActor(AActor* HitActor)
 	);
 }
 
-void UEnemyCombatComponent::OnWeaponPullerFromTargetActor(AActor* InteractedActor)
+void UEnemyCombatComponent::OnWeaponPullerFromTargetActor(ARPGWeaponBase* Weapon, AActor* InteractedActor)
 {
 	UE_LOG(LogEnemyCombatComponent, Log, TEXT("EnemyCombatComponent::OnWeaponPullerFromTargetActor - Actor: %s"),
 		InteractedActor ? *InteractedActor->GetName() : TEXT("null"));

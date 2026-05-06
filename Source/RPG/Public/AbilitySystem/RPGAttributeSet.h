@@ -7,7 +7,7 @@
 #include "AbilitySystem/RPGAbilitySystemComponent.h"
 #include "RPGAttributeSet.generated.h"
 
-// 属性变化委托声明（C++用，非动态）
+// 属性变化委托声明（供 HealthComponent 桥接用，C++非动态）
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnAttributeValueChanged, float, float);
 
 #define ATTRIBUTE_ACCESSORS(ClassName, PropertyName) \
@@ -62,10 +62,6 @@ class RPG_API URPGAttributeSet : public UAttributeSet
 
 public:
 	URPGAttributeSet();
-
-	// UI绑定用的委托
-	FOnAttributeValueChanged OnHealthChanged;
-	FOnAttributeValueChanged OnManaChanged;
 
 	// 网络同步
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;

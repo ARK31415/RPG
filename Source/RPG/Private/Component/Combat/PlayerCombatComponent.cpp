@@ -149,14 +149,14 @@ float UPlayerCombatComponent::GetPlayerCurrentEquippedWeaponDamageAtLevel(float 
 	return 0.f;
 }
 
-void UPlayerCombatComponent::OnHitTargetActor(AActor* HitActor)
+void UPlayerCombatComponent::OnHitTargetActor(ARPGWeaponBase* Weapon, AActor* HitActor)
 {
 	if(OverlappedActors.Contains(HitActor))
 	{
 		return;
 	}
 
-	OverlappedActors.AddUnique(HitActor);
+	OverlappedActors.Add(HitActor);
 
 	FGameplayEventData Data;
 	Data.Instigator = GetOwningPawn();
@@ -177,7 +177,7 @@ void UPlayerCombatComponent::OnHitTargetActor(AActor* HitActor)
 	);
 }
 
-void UPlayerCombatComponent::OnWeaponPullerFromTargetActor(AActor* InteractedActor)
+void UPlayerCombatComponent::OnWeaponPullerFromTargetActor(ARPGWeaponBase* Weapon, AActor* InteractedActor)
 {
 	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
 		GetOwningPawn(),

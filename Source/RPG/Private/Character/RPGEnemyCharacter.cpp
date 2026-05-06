@@ -140,14 +140,9 @@ void ARPGEnemyCharacter::OnDeathStarted_Implementation()
 {
 	UE_LOG(LogRPGEnemyCharacter, Warning, TEXT("[Enemy] OnDeathStarted() called on %s"), *GetName());
 
-	// 1. 设置死亡Tag
-	if (RPGAbilitySystemComponent)
-	{
-		RPGAbilitySystemComponent->AddLooseGameplayTag(RPGGameplayTags::Shared_Status_Dead);
-		UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[Enemy] Set Shared_Status_Dead tag"));
-	}
+	// 敌人特有逻辑（碰撞/移动禁用已由 Death GA 处理）
 
-	// 2. 通知AI控制器更新Blackboard
+	// 1. 通知 AI 控制器更新 Blackboard
 	if (CachedAIController.IsValid())
 	{
 		UBlackboardComponent* Blackboard = CachedAIController->GetBlackboardComponent();
@@ -158,37 +153,14 @@ void ARPGEnemyCharacter::OnDeathStarted_Implementation()
 		}
 	}
 
-	// 3. 禁用战斗组件
+	// 2. 禁用战斗组件
 	if (EnemyCombatComponent)
 	{
 		EnemyCombatComponent->SetComponentTickEnabled(false);
 		UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[Enemy] Disabled EnemyCombatComponent"));
 	}
 
-	// 4. 禁用碰撞盒
-	UCapsuleComponent* Capsule = GetCapsuleComponent();
-	if (Capsule)
-	{
-		Capsule->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		Capsule->SetCollisionResponseToAllChannels(ECR_Ignore);
-		UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[Enemy] Disabled collision"));
-	}
-
-	// 5. 停止移动
-	UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
-	if (MovementComponent)
-	{
-		MovementComponent->StopMovementImmediately();
-		MovementComponent->SetMovementMode(MOVE_None);
-		UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[Enemy] Stopped movement"));
-	}
-
-	// 6. 播放死亡动画(通过动画蓝图检测Tag)
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-	if (AnimInstance)
-	{
-		UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[Enemy] Playing death animation via AnimBlueprint"));
-	}
+	// 3. 死亡动画通过 AnimBlueprint 检测 Shared_Status_Dead Tag 自动播放
 }
 
 void ARPGEnemyCharacter::OnDeathFinished_Implementation()

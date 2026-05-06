@@ -16,9 +16,9 @@ class RPG_API UEnemyCombatComponent : public UPawnCombatComponent
 	GENERATED_BODY()
 
 public:
-	virtual void OnHitTargetActor(AActor* HitActor) override;
+	virtual void OnHitTargetActor(ARPGWeaponBase* Weapon, AActor* HitActor) override;
 
-	virtual void OnWeaponPullerFromTargetActor(AActor* InteractedActor) override;
+	virtual void OnWeaponPullerFromTargetActor(ARPGWeaponBase* Weapon, AActor* InteractedActor) override;
 
 	// TODO: 敌人特有碰撞控制（Body碰撞盒等）
 	// virtual void ToggleBodyCollisionBoxCollision(bool bShouldEnable, EToggleDamageType ToggleDamageType);

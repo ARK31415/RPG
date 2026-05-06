@@ -129,13 +129,10 @@ void URPGAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute, 
 		{
 			SetCurrentHealth(NewValue);
 		}
-		// 触发UI更新委托
-		OnHealthChanged.Broadcast(GetCurrentHealth(), GetMaxHealth());
 	}
 	else if (Attribute == GetCurrentHealthAttribute())
 	{
-		// 触发UI更新委托
-		OnHealthChanged.Broadcast(GetCurrentHealth(), GetMaxHealth());
+		// HealthComponent 通过 ASC 原生 Delegate 监听属性变化，无需此处广播
 	}
 	else if (Attribute == GetMaxRageAttribute())
 	{
@@ -150,13 +147,10 @@ void URPGAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute, 
 		{
 			SetCurrentMana(NewValue);
 		}
-		// 触发UI更新委托
-		OnManaChanged.Broadcast(GetCurrentMana(), GetMaxMana());
 	}
 	else if (Attribute == GetCurrentManaAttribute())
 	{
-		// 触发UI更新委托
-		OnManaChanged.Broadcast(GetCurrentMana(), GetMaxMana());
+		// HealthComponent 通过 ASC 原生 Delegate 监听属性变化，无需此处广播
 	}
 
 	// 注意：这里可以添加属性变更后的其他逻辑

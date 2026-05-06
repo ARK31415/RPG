@@ -1,4 +1,4 @@
-#include "AbilitySystem/Abilities/Enemy/RPGAbility_EnemyAttackCombo.h"
+#include "AbilitySystem/Abilities/Enemy/RPGEnemyAbility_AttackCombo.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 #include "Component/Combat/EnemyCombatComponent.h"
@@ -6,13 +6,13 @@
 #include "RPGGameplayTags.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 
-URPGAbility_EnemyAttackCombo::URPGAbility_EnemyAttackCombo()
+URPGEnemyAbility_AttackCombo::URPGEnemyAbility_AttackCombo()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetSecurityPolicy = EGameplayAbilityNetSecurityPolicy::ClientOrServer;
 }
 
-void URPGAbility_EnemyAttackCombo::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
+void URPGEnemyAbility_AttackCombo::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
@@ -22,7 +22,7 @@ void URPGAbility_EnemyAttackCombo::ActivateAbility(const FGameplayAbilitySpecHan
 	PlayCurrentComboMontage();
 }
 
-void URPGAbility_EnemyAttackCombo::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
+void URPGEnemyAbility_AttackCombo::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
 {
 	Super::OnGiveAbility(ActorInfo, Spec);
 
@@ -35,7 +35,7 @@ void URPGAbility_EnemyAttackCombo::OnGiveAbility(const FGameplayAbilityActorInfo
 	}
 }
 
-void URPGAbility_EnemyAttackCombo::AdvanceCombo()
+void URPGEnemyAbility_AttackCombo::AdvanceCombo()
 {
 	if (!CanContinueCombo())
 	{
@@ -50,19 +50,19 @@ void URPGAbility_EnemyAttackCombo::AdvanceCombo()
 	PlayCurrentComboMontage();
 }
 
-bool URPGAbility_EnemyAttackCombo::CanContinueCombo() const
+bool URPGEnemyAbility_AttackCombo::CanContinueCombo() const
 {
 	return CurrentComboIndex < MaxComboCount - 1;
 }
 
-void URPGAbility_EnemyAttackCombo::ResetComboState()
+void URPGEnemyAbility_AttackCombo::ResetComboState()
 {
 	CurrentComboIndex = 0;
 
 	UE_LOG(LogTemp, Log, TEXT("[EnemyAttackCombo] Reset combo state"));
 }
 
-void URPGAbility_EnemyAttackCombo::PlayCurrentComboMontage()
+void URPGEnemyAbility_AttackCombo::PlayCurrentComboMontage()
 {
 	if (ComboMontages.Num() == 0 || CurrentComboIndex >= ComboMontages.Num())
 	{
@@ -92,14 +92,14 @@ void URPGAbility_EnemyAttackCombo::PlayCurrentComboMontage()
 		true
 	);
 
-	MontageTask->OnCompleted.AddDynamic(this, &URPGAbility_EnemyAttackCombo::OnMontageCompleted);
-	MontageTask->OnBlendOut.AddDynamic(this, &URPGAbility_EnemyAttackCombo::OnMontageBlendOut);
-	MontageTask->OnInterrupted.AddDynamic(this, &URPGAbility_EnemyAttackCombo::OnMontageInterrupted);
-	MontageTask->OnCancelled.AddDynamic(this, &URPGAbility_EnemyAttackCombo::OnMontageCancelled);
+	MontageTask->OnCompleted.AddDynamic(this, &URPGEnemyAbility_AttackCombo::OnMontageCompleted);
+	MontageTask->OnBlendOut.AddDynamic(this, &URPGEnemyAbility_AttackCombo::OnMontageBlendOut);
+	MontageTask->OnInterrupted.AddDynamic(this, &URPGEnemyAbility_AttackCombo::OnMontageInterrupted);
+	MontageTask->OnCancelled.AddDynamic(this, &URPGEnemyAbility_AttackCombo::OnMontageCancelled);
 	MontageTask->ReadyForActivation();
 }
 
-UEnemyCombatComponent* URPGAbility_EnemyAttackCombo::GetCombatComponentFromActorInfo() const
+UEnemyCombatComponent* URPGEnemyAbility_AttackCombo::GetCombatComponentFromActorInfo() const
 {
 	if (CachedCombatComponent.IsValid())
 	{
@@ -117,24 +117,24 @@ UEnemyCombatComponent* URPGAbility_EnemyAttackCombo::GetCombatComponentFromActor
 	return nullptr;
 }
 
-void URPGAbility_EnemyAttackCombo::OnMontageCompleted()
+void URPGEnemyAbility_AttackCombo::OnMontageCompleted()
 {
 	UE_LOG(LogTemp, Log, TEXT("[EnemyAttackCombo] Montage Completed - Index: %d"), CurrentComboIndex);
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }
 
-void URPGAbility_EnemyAttackCombo::OnMontageBlendOut()
+void URPGEnemyAbility_AttackCombo::OnMontageBlendOut()
 {
 	UE_LOG(LogTemp, Log, TEXT("[EnemyAttackCombo] Montage BlendOut - Index: %d"), CurrentComboIndex);
 }
 
-void URPGAbility_EnemyAttackCombo::OnMontageInterrupted()
+void URPGEnemyAbility_AttackCombo::OnMontageInterrupted()
 {
 	UE_LOG(LogTemp, Warning, TEXT("[EnemyAttackCombo] Montage Interrupted - Index: %d"), CurrentComboIndex);
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 }
 
-void URPGAbility_EnemyAttackCombo::OnMontageCancelled()
+void URPGEnemyAbility_AttackCombo::OnMontageCancelled()
 {
 	UE_LOG(LogTemp, Warning, TEXT("[EnemyAttackCombo] Montage Cancelled - Index: %d"), CurrentComboIndex);
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);

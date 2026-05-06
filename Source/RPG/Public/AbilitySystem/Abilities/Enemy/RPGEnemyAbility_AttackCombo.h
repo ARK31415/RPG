@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystem/Abilities/RPGEnemyGameplayAbility.h"
-#include "RPGAbility_EnemyAttackCombo.generated.h"
+#include "RPGEnemyAbility_AttackCombo.generated.h"
 
 class UEnemyCombatComponent;
 
@@ -19,12 +19,12 @@ class UEnemyCombatComponent;
  * 4. Montage completes -> EndAbility
  */
 UCLASS(Abstract, Blueprintable)
-class RPG_API URPGAbility_EnemyAttackCombo : public URPGEnemyGameplayAbility
+class RPG_API URPGEnemyAbility_AttackCombo : public URPGEnemyGameplayAbility
 {
 	GENERATED_BODY()
 
 public:
-	URPGAbility_EnemyAttackCombo();
+	URPGEnemyAbility_AttackCombo();
 
 protected:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
