@@ -5,6 +5,9 @@
 #include "RPGEnemyAbility_AttackCombo.generated.h"
 
 class UEnemyCombatComponent;
+class UAbilityTask_WaitGameplayEvent;
+class UGameplayEffect;
+class URPGAttributeSet;
 
 /**
  * Enemy Attack Combo Base Class
@@ -64,6 +67,14 @@ protected:
 	UFUNCTION()
 	virtual void OnMontageCancelled();
 
+	// Handle MeleeHit event and apply damage
+	UFUNCTION()
+	virtual void HandleApplyDamage(FGameplayEventData EventData);
+
+	// Send HitReact event to target
+	UFUNCTION()
+	virtual void SendHitReactEvent(AActor* TargetActor, FGameplayEventData EventData);
+
 protected:
 	// Combo montages sequence (set in Blueprint subclass CDO)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combo")
@@ -79,4 +90,11 @@ protected:
 
 	// Internal references
 	TWeakObjectPtr<UEnemyCombatComponent> CachedCombatComponent;
+
+	// Wait GameplayEvent task reference (for cleanup)
+	UAbilityTask_WaitGameplayEvent* WaitMeleeHitEventTask = nullptr;
+
+	// Damage GameplayEffect class (set in Blueprint or CDO)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Damage")
+	TSubclassOf<UGameplayEffect> DamageEffectClass;
 };

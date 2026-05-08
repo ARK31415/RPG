@@ -5,6 +5,8 @@
 #include "Character/RPGEnemyCharacter.h"
 #include "RPGGameplayTags.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "AbilitySystem/RPGAttributeSet.h"
 
 URPGEnemyAbility_AttackCombo::URPGEnemyAbility_AttackCombo()
 {
@@ -17,6 +19,22 @@ void URPGEnemyAbility_AttackCombo::ActivateAbility(const FGameplayAbilitySpecHan
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
 	UE_LOG(LogTemp, Log, TEXT("[EnemyAttackCombo] Activated: %s"), *GetName());
+
+	// 监听 MeleeHit 事件
+	WaitMeleeHitEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+		this,
+		RPGGameplayTags::Shared_Event_MeleeHit,
+		nullptr,
+		false,
+		true
+	);
+
+	if (WaitMeleeHitEventTask)
+	{
+		WaitMeleeHitEventTask->EventReceived.AddDynamic(this, &URPGEnemyAbility_AttackCombo::HandleApplyDamage);
+		WaitMeleeHitEventTask->ReadyForActivation();
+		UE_LOG(LogTemp, Log, TEXT("[EnemyAttackCombo] WaitMeleeHitEventTask activated"));
+	}
 
 	ResetComboState();
 	PlayCurrentComboMontage();
@@ -138,4 +156,70 @@ void URPGEnemyAbility_AttackCombo::OnMontageCancelled()
 {
 	UE_LOG(LogTemp, Warning, TEXT("[EnemyAttackCombo] Montage Cancelled - Index: %d"), CurrentComboIndex);
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
+}
+
+void URPGEnemyAbility_AttackCombo::HandleApplyDamage(FGameplayEventData EventData)
+{
+	UE_LOG(LogTemp, Log, TEXT("[EnemyAttackCombo] ===== HandleApplyDamage ====="));
+
+	// 1. 获取目标
+	AActor* TargetActor = const_cast<AActor*>(EventData.Target.Get());
+	if (!TargetActor)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[EnemyAttackCombo] ERROR: TargetActor is null!"));
+		return;
+	}
+	UE_LOG(LogTemp, Log, TEXT("[EnemyAttackCombo] Target: %s"), *TargetActor->GetName());
+
+	// 2. 从 ASC 获取 AttackPower 属性作为 BaseDamage
+	UAbilitySystemComponent* OwningASC = GetAbilitySystemComponentFromActorInfo();
+	if (!OwningASC)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[EnemyAttackCombo] ERROR: ASC is null!"));
+		return;
+	}
+
+	float BaseDamage = 0.f;
+	if (const URPGAttributeSet* AttributeSet = OwningASC->GetSet<URPGAttributeSet>())
+	{
+		BaseDamage = AttributeSet->GetAttackPower();
+	}
+	UE_LOG(LogTemp, Log, TEXT("[EnemyAttackCombo] BaseDamage from AttackPower: %.2f"), BaseDamage);
+
+	// 3. 创建 GE Spec
+	if (!DamageEffectClass)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[EnemyAttackCombo] ERROR: DamageEffectClass is not set!"));
+		return;
+	}
+
+	FGameplayEffectSpecHandle SpecHandle = MakeEnemyDamageEffectSpecHandle(DamageEffectClass, BaseDamage);
+	if (!SpecHandle.IsValid())
+	{
+		UE_LOG(LogTemp, Error, TEXT("[EnemyAttackCombo] ERROR: Failed to create SpecHandle!"));
+		return;
+	}
+
+	// 4. 应用伤害到目标
+	NativeApplyEffectSpecHandleToTarget(TargetActor, SpecHandle);
+	UE_LOG(LogTemp, Log, TEXT("[EnemyAttackCombo] Applied Damage GE to Target: %s"), *TargetActor->GetName());
+
+	// 5. 发送 HitReact 事件给目标
+	SendHitReactEvent(TargetActor, EventData);
+}
+
+void URPGEnemyAbility_AttackCombo::SendHitReactEvent(AActor* TargetActor, FGameplayEventData EventData)
+{
+	if (!TargetActor)
+	{
+		return;
+	}
+
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(
+		TargetActor,
+		RPGGameplayTags::Shared_Event_HitReact,
+		EventData
+	);
+
+	UE_LOG(LogTemp, Log, TEXT("[EnemyAttackCombo] Sent HitReact event to Target: %s"), *TargetActor->GetName());
 }

@@ -8,6 +8,7 @@
 
 class ARPGEnemyCharacter;
 class UEnemyCombatComponent;
+class UGameplayEffect;
 
 /**
  * 敌人Ability基类
@@ -28,9 +29,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "RPG|Ability")
 	UEnemyCombatComponent* GetEnemyCombatComponentFromActorInfo() const;
 
-	// TODO: 未来扩展
-	// - AI控制器访问
-	// - 仇恨系统接口
-	// - 难度调整接口
-	// - 行为树集成
+	/** 创建敌人伤害 GE Spec（从 AttackPower 属性获取基础伤害） */
+	UFUNCTION(BlueprintCallable, Category = "RPG|Ability")
+	FGameplayEffectSpecHandle MakeEnemyDamageEffectSpecHandle(TSubclassOf<UGameplayEffect> EffectClass, float InBaseDamage);
 };
