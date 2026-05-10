@@ -76,3 +76,5 @@ Plugins/**/Intermediate/*
 DerivedDataCache/*
 /Source/Skill
 /.vscode
+/Source/Docs/lunwen
+/.trae

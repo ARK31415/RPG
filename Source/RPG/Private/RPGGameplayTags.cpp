@@ -82,4 +82,5 @@ namespace RPGGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG(RPGCommonUI_WidgetStack_GameMenu, "RPGCommonUI.WidgetStack.GameMenu");
 	UE_DEFINE_GAMEPLAY_TAG(RPGCommonUI_WidgetStack_GameHUD, "RPGCommonUI.WidgetStack.GameHUD");
 	UE_DEFINE_GAMEPLAY_TAG(RPGCommonUI_WidgetStack_Frontend, "RPGCommonUI.WidgetStack.Frontend");
+	UE_DEFINE_GAMEPLAY_TAG(RPGCommonUI_WidgetStack_Loading, "RPGCommonUI.WidgetStack.Loading");
 }

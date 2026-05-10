@@ -5,10 +5,12 @@
 #include "Widgets/CommonActivatableWidgetContainer.h"
 #include "PrimaryGameLayout.h"
 #include "Engine/World.h"
+#include "Engine/GameInstance.h"
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/GameModeBase.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Subsystem/RPGLoadingSubsystem.h"
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
 
@@ -84,7 +86,7 @@ void URPGMainMenuWidget::NativeOnDeactivated()
 
 void URPGMainMenuWidget::StartGame()
 {
-	// 获取当前世界
+	// 获取 GameInstance
 	UWorld* World = GetWorld();
 	if (!World)
 	{
@@ -92,17 +94,26 @@ void URPGMainMenuWidget::StartGame()
 		return;
 	}
 
-	// 获取玩家控制器
-	APlayerController* PC = GetOwningPlayer<APlayerController>();
-	if (!PC)
+	UGameInstance* GI = World->GetGameInstance();
+	if (!GI)
 	{
-		UE_LOG(LogRPGMainMenuWidget, Warning, TEXT("URPGMainMenuWidget::StartGame - PlayerController is null"));
+		UE_LOG(LogRPGMainMenuWidget, Warning, TEXT("URPGMainMenuWidget::StartGame - GameInstance is null"));
 		return;
 	}
 
-	// 加载主关卡
-	UGameplayStatics::OpenLevel(World, TEXT("MainLevel"), true, TEXT("?listen"));
-	UE_LOG(LogRPGMainMenuWidget, Log, TEXT("URPGMainMenuWidget::StartGame - Loading MainLevel"));
+	// 获取加载子系统
+	URPGLoadingSubsystem* LoadingSubsystem = GI->GetSubsystem<URPGLoadingSubsystem>();
+	if (!LoadingSubsystem)
+	{
+		UE_LOG(LogRPGMainMenuWidget, Warning, TEXT("URPGMainMenuWidget::StartGame - LoadingSubsystem is null"));
+		return;
+	}
+
+	// 异步加载主关卡（含 Slate 加载画面）
+	TSoftObjectPtr<UWorld> MainLevel(FSoftObjectPath(TEXT("/Game/Maps/MainLevel")));
+	LoadingSubsystem->AsyncLoadLevel(MainLevel, true, TEXT("?listen"));
+
+	UE_LOG(LogRPGMainMenuWidget, Log, TEXT("URPGMainMenuWidget::StartGame - Async loading MainLevel via LoadingSubsystem"));
 }
 
 void URPGMainMenuWidget::ExitGame()

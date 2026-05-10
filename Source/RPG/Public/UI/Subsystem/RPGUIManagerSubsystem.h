@@ -9,6 +9,7 @@
 #include "RPGUIManagerSubsystem.generated.h"
 
 class URPGWidget_ActivatableBase;
+class URPGLoadingScreenWidget;
 class UWidgetLayout_Base;
 class APlayerController;
 class UPrimaryGameLayout;
@@ -46,6 +47,15 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void PushToWidgetByTag(TSoftObjectPtr<UWidgetLayout_Base> InWidget, FGameplayTag Tag);
+
+	/**
+	 * 将 LoadingScreen Widget 推入 Modal 栈（用于流式加载进度展示）
+	 * @param LoadingWidgetClass LoadingScreen Widget 的软引用类（蓝图子类）
+	 */
+	void PushLoadingScreen(TSoftClassPtr<URPGLoadingScreenWidget> LoadingWidgetClass);
+
+	/** 从 Modal 栈弹出 LoadingScreen Widget */
+	void PopLoadingScreen();
 
 private:
 	UPROPERTY(Transient)

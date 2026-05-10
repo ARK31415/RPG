@@ -40,17 +40,33 @@ ARPGEnemyAIController::ARPGEnemyAIController(const FObjectInitializer& ObjectIni
 ETeamAttitude::Type ARPGEnemyAIController::GetTeamAttitudeTowards(const AActor& Other) const
 {
 	const APawn* PawnToCheck = Cast<const APawn>(&Other);
+	if (!PawnToCheck)
+	{
+		// 非 Pawn 类型，默认友好
+		return ETeamAttitude::Friendly;
+	}
 
 	const IGenericTeamAgentInterface* OtherTeamAgent = Cast<const IGenericTeamAgentInterface>(PawnToCheck->GetController());
 
-	if(OtherTeamAgent && OtherTeamAgent->GetGenericTeamId() < GetGenericTeamId())
+	if (OtherTeamAgent)
 	{
-		UE_LOG(LogRPGEnemyAIController, Warning, TEXT("[%s] GetTeamAttitudeTowards OtherTeamAgentTeamId %d - Hostile team detected"), *GetName(), OtherTeamAgent->GetGenericTeamId().GetId())
-		return ETeamAttitude::Hostile;
+		// 有队伍系统，进行敌我判断
+		if (OtherTeamAgent->GetGenericTeamId() < GetGenericTeamId())
+		{
+			UE_LOG(LogRPGEnemyAIController, Warning, TEXT("[%s] GetTeamAttitudeTowards OtherTeamId %d < SelfTeamId %d - Hostile"), 
+				*GetName(), OtherTeamAgent->GetGenericTeamId().GetId(), GetGenericTeamId().GetId());
+			return ETeamAttitude::Hostile;
+		}
+		else
+		{
+			UE_LOG(LogRPGEnemyAIController, Warning, TEXT("[%s] GetTeamAttitudeTowards OtherTeamId %d >= SelfTeamId %d - Friendly"), 
+				*GetName(), OtherTeamAgent->GetGenericTeamId().GetId(), GetGenericTeamId().GetId());
+			return ETeamAttitude::Friendly;
+		}
 	}
 	
-	UE_LOG(LogRPGEnemyAIController, Warning, TEXT("[%s] GetTeamAttitudeTowards OtherTeamAgentTeamId %d - Friendly team detected"), *GetName(), OtherTeamAgent->GetGenericTeamId().GetId())
-
+	// 没有队伍系统（无 Controller 或未实现接口），默认中立/友好
+	UE_LOG(LogRPGEnemyAIController, Warning, TEXT("[%s] GetTeamAttitudeTowards - No team agent, default Friendly"), *GetName());
 	return ETeamAttitude::Friendly;
 }
 

@@ -9,7 +9,8 @@ URPGEnemyHealthComponent::URPGEnemyHealthComponent()
 	PrimaryComponentTick.bCanEverTick = false;
 	bPlayDeathAnimation = true;
 	DeathAnimationDuration = 2.0f;
-	bDestroyOnDeath = true;
+	// 默认不销毁，交由对象池管理
+	bDestroyOnDeath = false;
 	DestroyDelay = 3.0f;
 }
 

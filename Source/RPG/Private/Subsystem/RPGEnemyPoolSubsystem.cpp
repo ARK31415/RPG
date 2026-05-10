@@ -1,11 +1,16 @@
 // RPGEnemyPoolSubsystem.cpp - 敌人对象池实现
 
 #include "Subsystem/RPGEnemyPoolSubsystem.h"
+
+#include "RPGGameplayTags.h"
 #include "Character/RPGEnemyCharacter.h"
 #include "AbilitySystem/RPGAbilitySystemComponent.h"
+#include "AbilitySystem/RPGAttributeSet.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Component/Health/RPGHealthComponent.h"
+#include "Component/Combat/EnemyCombatComponent.h"
+#include "GameplayEffect.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRPGEnemyPool, Log, All)
 
@@ -138,6 +143,11 @@ int32 URPGEnemyPoolSubsystem::GetAvailableCount(TSubclassOf<ARPGEnemyCharacter> 
 
 void URPGEnemyPoolSubsystem::DeactivateEnemy(ARPGEnemyCharacter* Enemy)
 {
+	if (!IsValid(Enemy))
+	{
+		return;
+	}
+
 	// 隐藏并禁用
 	Enemy->SetActorHiddenInGame(true);
 	Enemy->SetActorEnableCollision(false);
@@ -158,10 +168,48 @@ void URPGEnemyPoolSubsystem::DeactivateEnemy(ARPGEnemyCharacter* Enemy)
 	{
 		Controller->UnPossess();
 	}
+
+	// 清理 ASC 状态
+	if (URPGAbilitySystemComponent* ASC = Enemy->GetRPGAbilitySystemComponent())
+	{
+		// 清除所有 Active GameplayEffects
+		ASC->RemoveActiveEffectsWithAppliedTags(FGameplayTagContainer());
+		
+		// 清除所有 Loose GameplayTags（需要传入空容器来清除所有）
+		FGameplayTagContainer AllTags;
+		ASC->GetOwnedGameplayTags(AllTags);
+		ASC->RemoveLooseGameplayTags(AllTags);
+		
+		UE_LOG(LogRPGEnemyPool, Log, TEXT("DeactivateEnemy: [%s] ASC cleared"), *Enemy->GetName());
+	}
+
+	// 重置健康组件死亡状态
+	if (URPGHealthComponent* HealthComp = Enemy->FindComponentByClass<URPGHealthComponent>())
+	{
+		// 重置死亡标记（通过重新初始化或手动重置）
+		// 注意：HealthComponent 的内部状态会在下次 ActivateEnemy 时通过属性重置来恢复
+	}
+
+	// 禁用战斗组件
+	if (UEnemyCombatComponent* CombatComp = Enemy->GetEnemyCombatComponent())
+	{
+		CombatComp->SetComponentTickEnabled(false);
+	}
+
+	// 将敌人移至隐藏位置
+	const FVector PoolStagingLocation(0.f, 0.f, -10000.f);
+	Enemy->SetActorLocation(PoolStagingLocation);
+	
+	UE_LOG(LogRPGEnemyPool, Log, TEXT("DeactivateEnemy: [%s] deactivated and staged"), *Enemy->GetName());
 }
 
 void URPGEnemyPoolSubsystem::ActivateEnemy(ARPGEnemyCharacter* Enemy, const FTransform& SpawnTransform)
 {
+	if (!IsValid(Enemy))
+	{
+		return;
+	}
+
 	// 重置位置
 	Enemy->SetActorTransform(SpawnTransform);
 
@@ -173,14 +221,47 @@ void URPGEnemyPoolSubsystem::ActivateEnemy(ARPGEnemyCharacter* Enemy, const FTra
 	// 恢复移动
 	if (UCharacterMovementComponent* Movement = Enemy->GetCharacterMovement())
 	{
+		Movement->StopMovementImmediately();
 		Movement->SetComponentTickEnabled(true);
 	}
 
-	// 重新激活 ASC 和重置属性（由 BeginPlay 流程处理的内容需手动触发）
-	// 注意：从池中复用的敌人需要在蓝图或调用处手动重新初始化
-	// 例如：重新应用属性 GE、重启行为树等
-	// 这里保持简单，让 AutoPossessAI 机制自动触发 PossessedBy
+	// 完整重置 ASC 状态
+	if (URPGAbilitySystemComponent* ASC = Enemy->GetRPGAbilitySystemComponent())
+	{
+		// 重新初始化 ActorInfo
+		ASC->InitAbilityActorInfo(Enemy, Enemy);
+		
+		// 清除所有 Active GameplayEffects（保留Granted Abilities）
+		ASC->RemoveActiveEffectsWithAppliedTags(FGameplayTagContainer());
+		
+		// 清除所有 Loose GameplayTags
+		FGameplayTagContainer AllTags;
+		ASC->GetOwnedGameplayTags(AllTags);
+		ASC->RemoveLooseGameplayTags(AllTags);
+		
+		// 重置健康组件状态
+		if (URPGHealthComponent* HealthComp = Enemy->FindComponentByClass<URPGHealthComponent>())
+		{
+			// 直接设置属性值来重置生命值
+			const URPGAttributeSet* AttributeSet = ASC->GetSet<URPGAttributeSet>();
+			if (AttributeSet)
+			{
+				const float MaxHealth = AttributeSet->GetMaxHealth();
+				ASC->SetNumericAttributeBase(URPGAttributeSet::GetCurrentHealthAttribute(), MaxHealth);
+				UE_LOG(LogRPGEnemyPool, Log, TEXT("ActivateEnemy: [%s] Health reset to %.0f"), *Enemy->GetName(), MaxHealth);
+			}
+		}
+	}
+
+	// 重置战斗组件
+	if (UEnemyCombatComponent* CombatComp = Enemy->GetEnemyCombatComponent())
+	{
+		CombatComp->SetComponentTickEnabled(true);
+	}
 
 	// 触发 AI 重新接管
 	Enemy->SpawnDefaultController();
+	
+	UE_LOG(LogRPGEnemyPool, Log, TEXT("ActivateEnemy: [%s] activated at %s"), 
+		*Enemy->GetName(), *SpawnTransform.GetLocation().ToString());
 }

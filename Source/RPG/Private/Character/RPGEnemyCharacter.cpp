@@ -16,6 +16,7 @@
 #include "RPGGameplayTags.h"
 #include "Component/Health/RPGEnemyHealthComponent.h"
 #include "Component/UI/RPGEnemyUIComponent.h"
+#include "Subsystem/RPGEnemyPoolSubsystem.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRPGEnemyCharacter, Log, All)
 
@@ -171,8 +172,23 @@ void ARPGEnemyCharacter::OnDeathFinished_Implementation()
 	// 1. 掉落物品
 	// 2. 给予经验值
 	// 3. 播放音效
-	
-	// 设置自动销毁时间(3秒)
-	SetLifeSpan(3.0f);
-	UE_LOG(LogRPGEnemyCharacter, Warning, TEXT("[Enemy] SetLifeSpan(3.0s), will be destroyed automatically"));
+
+	// 根据 Tag 判断敌人来源，决定回收方式
+	if (UWorld* World = GetWorld())
+	{
+		// 检查是否来自对象池
+		if (Tags.Contains(FName("SpawnedFromPool")))
+		{
+			if (URPGEnemyPoolSubsystem* Pool = World->GetSubsystem<URPGEnemyPoolSubsystem>())
+			{
+				Pool->ReleaseEnemy(this);
+				UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[Enemy] Released to pool: %s"), *GetName());
+				return;
+			}
+		}
+	}
+
+	// 回退：Pool 不可用或普通生成的敌人，直接销毁
+	SetLifeSpan(0.1f);
+	UE_LOG(LogRPGEnemyCharacter, Warning, TEXT("[Enemy] No pool or direct spawn, SetLifeSpan(0.1s): %s"), *GetName());
 }
