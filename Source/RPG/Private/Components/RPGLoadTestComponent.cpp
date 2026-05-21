@@ -5,6 +5,7 @@
 #include "Engine/GameInstance.h"
 #include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
+#include "RPGDebugHelper.h"
 
 URPGLoadTestComponent::URPGLoadTestComponent()
 {
@@ -16,18 +17,18 @@ void URPGLoadTestComponent::RunSyncLoadTest()
 	UGameInstance* GI = GetWorld()->GetGameInstance();
 	if (!GI)
 	{
-		UE_LOG(LogTemp, Error, TEXT("RunSyncLoadTest - GameInstance is null"));
+		Debug::PrintError(TEXT("[LoadTest] RunSyncLoadTest - GameInstance is null"));
 		return;
 	}
 
 	URPGLoadingSubsystem* LoadingSubsystem = GI->GetSubsystem<URPGLoadingSubsystem>();
 	if (!LoadingSubsystem)
 	{
-		UE_LOG(LogTemp, Error, TEXT("RunSyncLoadTest - LoadingSubsystem is null"));
+		Debug::PrintError(TEXT("[LoadTest] RunSyncLoadTest - LoadingSubsystem is null"));
 		return;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("========== Starting SYNC Load Test =========="));
+	Debug::PrintWarning(TEXT("[LoadTest] ========== Starting SYNC Load Test =========="));
 
 	// 返回到测试起始地图（假设为第一个）
 	if (TestMaps.Num() > 0)
@@ -35,8 +36,8 @@ void URPGLoadTestComponent::RunSyncLoadTest()
 		const FString StartMap = TestMaps[0].ToSoftObjectPath().ToString();
 		UGameplayStatics::OpenLevel(this, FName(*StartMap));
 		
-		UE_LOG(LogTemp, Warning, TEXT("Returned to start map: %s"), *StartMap);
-		UE_LOG(LogTemp, Warning, TEXT("Now manually call SyncLoadLevel for each test map"));
+		Debug::PrintWarning(FString::Printf(TEXT("[LoadTest] Returned to start map: %s"), *StartMap));
+		Debug::PrintWarning(TEXT("[LoadTest] Now manually call SyncLoadLevel for each test map"));
 	}
 }
 
@@ -45,18 +46,18 @@ void URPGLoadTestComponent::RunAsyncLoadTest()
 	UGameInstance* GI = GetWorld()->GetGameInstance();
 	if (!GI)
 	{
-		UE_LOG(LogTemp, Error, TEXT("RunAsyncLoadTest - GameInstance is null"));
+		Debug::PrintError(TEXT("[LoadTest] RunAsyncLoadTest - GameInstance is null"));
 		return;
 	}
 
 	URPGLoadingSubsystem* LoadingSubsystem = GI->GetSubsystem<URPGLoadingSubsystem>();
 	if (!LoadingSubsystem)
 	{
-		UE_LOG(LogTemp, Error, TEXT("RunAsyncLoadTest - LoadingSubsystem is null"));
+		Debug::PrintError(TEXT("[LoadTest] RunAsyncLoadTest - LoadingSubsystem is null"));
 		return;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("========== Starting ASYNC Load Test =========="));
+	Debug::PrintWarning(TEXT("[LoadTest] ========== Starting ASYNC Load Test =========="));
 
 	// 异步加载测试地图
 	for (const auto& TestMap : TestMaps)
@@ -64,7 +65,7 @@ void URPGLoadTestComponent::RunAsyncLoadTest()
 		if (!TestMap.IsNull())
 		{
 			const FString MapPath = TestMap.ToSoftObjectPath().ToString();
-			UE_LOG(LogTemp, Warning, TEXT("Async loading: %s"), *MapPath);
+			Debug::PrintWarning(FString::Printf(TEXT("[LoadTest] Async loading: %s"), *MapPath));
 			LoadingSubsystem->AsyncLoadLevel(TestMap);
 		}
 	}
@@ -75,14 +76,14 @@ void URPGLoadTestComponent::PrintTestReport() const
 	UGameInstance* GI = GetWorld()->GetGameInstance();
 	if (!GI)
 	{
-		UE_LOG(LogTemp, Error, TEXT("PrintTestReport - GameInstance is null"));
+		Debug::PrintError(TEXT("[LoadTest] PrintTestReport - GameInstance is null"));
 		return;
 	}
 
 	const URPGLoadingSubsystem* LoadingSubsystem = GI->GetSubsystem<URPGLoadingSubsystem>();
 	if (!LoadingSubsystem)
 	{
-		UE_LOG(LogTemp, Error, TEXT("PrintTestReport - LoadingSubsystem is null"));
+		Debug::PrintError(TEXT("[LoadTest] PrintTestReport - LoadingSubsystem is null"));
 		return;
 	}
 

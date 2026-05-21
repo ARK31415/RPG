@@ -23,6 +23,7 @@
 #include "AbilitySystem/RPGAttributeSet.h"
 #include "Component/Health/RPGPlayerHealthComponent.h"
 #include "Component/UI/RPGPlayerUIComponent.h"
+#include "RPGDebugHelper.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRPGPlayerCharacter, All, All)
 
@@ -457,7 +458,7 @@ UPawnCombatComponent* ARPGPlayerCharacter::GetPawnCombatComponent() const
 
 void ARPGPlayerCharacter::Input_AbilityInputPressed(FGameplayTag InputTag)
 {
-	UE_LOG(LogTemp, Log, TEXT("Input_AbilityInputPressed: InputTag [%s]"), *InputTag.ToString());
+	Debug::Log(FString::Printf(TEXT("[PlayerCharacter] Input_AbilityInputPressed: InputTag [%s]"), *InputTag.ToString()));
 	if (ARPGPlayerState* PS = GetPlayerState<ARPGPlayerState>())
 	{
 		if (URPGAbilitySystemComponent* ASC = PS->GetRPGAbilitySystemComponent())
@@ -466,12 +467,12 @@ void ARPGPlayerCharacter::Input_AbilityInputPressed(FGameplayTag InputTag)
 		}
 		else
 		{
-			UE_LOG(LogTemp, Error, TEXT("Input_AbilityInputPressed: ASC is null!"));
+			Debug::PrintError(TEXT("[PlayerCharacter] Input_AbilityInputPressed: ASC is null!"));
 		}
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("Input_AbilityInputPressed: PlayerState is null!"));
+		Debug::PrintError(TEXT("[PlayerCharacter] Input_AbilityInputPressed: PlayerState is null!"));
 	}
 }
 

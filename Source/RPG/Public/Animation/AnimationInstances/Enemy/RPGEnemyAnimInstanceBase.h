@@ -22,6 +22,10 @@ public:
 	virtual void NativeInitializeAnimation() override;
 	virtual void NativeThreadSafeUpdateAnimation(float DeltaSeconds) override;
 
+	/** 设置死亡状态（由死亡能力调用） */
+	UFUNCTION(BlueprintCallable, Category = "AnimData|Enemy Combat")
+	void SetDeadState(bool bNewDead);
+
 protected:
 	// ========== 移动状态（简化版：Idle / Moving） ==========
 	

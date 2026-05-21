@@ -49,6 +49,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "HitReact")
 	TMap<FGameplayTag, TObjectPtr<UAnimMontage>> DirectionalHitReactMontages;
 
+	/** 默认受击蒙太奇（兜底，当未匹配到具体方向时使用） */
+	UPROPERTY(EditDefaultsOnly, Category = "HitReact")
+	TObjectPtr<UAnimMontage> DefaultHitReactMontage;
+
 	/** 受击蒙太奇播放速率 */
 	UPROPERTY(EditDefaultsOnly, Category = "HitReact")
 	float HitReactPlayRate;

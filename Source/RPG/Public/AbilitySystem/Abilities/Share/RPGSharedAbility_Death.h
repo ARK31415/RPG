@@ -3,8 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "AbilitySystem/Abilities/RPGGameplayAbility.h"
 #include "RPGSharedAbility_Death.generated.h"
+
+class UAnimMontage;
 
 /**
  * 共享死亡能力 (Shared Death Ability)
@@ -39,6 +42,22 @@ protected:
 	UFUNCTION(BlueprintNativeEvent, Category = "Death")
 	void FinishDeathSequence(AActor* AvatarActor);
 
+	/** 获取死亡蒙太奇（可被子类/蓝图重写以动态决定蒙太奇） */
+	UFUNCTION(BlueprintNativeEvent, Category = "Death")
+	UAnimMontage* GetDeathMontage(FGameplayTag DeathDirection) const;
+
+	/** 方向→死亡蒙太奇映射（在编辑器中配置，如 Front/Back/Left/Right） */
+	UPROPERTY(EditDefaultsOnly, Category = "Death")
+	TMap<FGameplayTag, TObjectPtr<UAnimMontage>> DirectionalDeathMontages;
+
+	/** 默认死亡蒙太奇（兜底，当未匹配到具体方向时使用） */
+	UPROPERTY(EditDefaultsOnly, Category = "Death")
+	TObjectPtr<UAnimMontage> DefaultDeathMontage;
+
+	/** 死亡蒙太奇播放速率 */
+	UPROPERTY(EditDefaultsOnly, Category = "Death")
+	float DeathMontagePlayRate;
+
 private:
 	/** 死亡完成延迟计时器 */
 	FTimerHandle DeathFinishTimerHandle;
@@ -46,4 +65,15 @@ private:
 	/** 死亡完成延迟时间（秒） */
 	UPROPERTY(EditDefaultsOnly, Category = "Death")
 	float DeathFinishDelay;
+
+	/** 播放死亡蒙太奇并绑定回调 */
+	void PlayDeathMontage(FGameplayTag DeathDirection);
+
+	/** 蒙太奇完成回调 */
+	UFUNCTION()
+	void OnDeathMontageCompleted();
+
+	/** 蒙太奇中断回调 */
+	UFUNCTION()
+	void OnDeathMontageInterrupted();
 };

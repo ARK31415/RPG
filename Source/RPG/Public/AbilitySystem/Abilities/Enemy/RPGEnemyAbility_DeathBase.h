@@ -48,9 +48,5 @@ protected:
 	UFUNCTION(BlueprintNativeEvent, Category = "RPG|Ability|Death")
 	void OnEnemyDeathFinished(ARPGEnemyCharacter* EnemyCharacter);
 
-	/** 敌人死亡后延迟销毁时间（秒），默认 5.0 */
-	UPROPERTY(EditDefaultsOnly, Category = "Death")
-	float EnemyDestroyDelay;
-
 	URPGEnemyAbility_DeathBase();
 };

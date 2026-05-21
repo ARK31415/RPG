@@ -137,7 +137,7 @@ UAnimMontage* URPGSharedAbility_HitReact::GetHitReactMontage_Implementation(FGam
 		return *FoundMontage;
 	}
 
-	// 回退：如果没找到精确方向，尝试 Front
+	// 回退 1：如果没找到精确方向，尝试 Front
 	if (HitDirection != RPGGameplayTags::Shared_Status_HitReact_Front)
 	{
 		if (const TObjectPtr<UAnimMontage>* FallbackMontage = DirectionalHitReactMontages.Find(RPGGameplayTags::Shared_Status_HitReact_Front))
@@ -146,7 +146,8 @@ UAnimMontage* URPGSharedAbility_HitReact::GetHitReactMontage_Implementation(FGam
 		}
 	}
 
-	return nullptr;
+	// 回退 2：尝试默认受击蒙太奇
+	return DefaultHitReactMontage;
 }
 
 void URPGSharedAbility_HitReact::OnMontageCompleted()

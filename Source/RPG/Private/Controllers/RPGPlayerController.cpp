@@ -4,6 +4,7 @@
 #include "Controllers/RPGPlayerController.h"
 #include "UI/Subsystem/RPGUIManagerSubsystem.h"
 #include "Engine/World.h"
+#include "RPGDebugHelper.h"
 
 ARPGPlayerController::ARPGPlayerController()
 {
@@ -18,11 +19,11 @@ void ARPGPlayerController::BeginPlay()
 	if (URPGUIManagerSubsystem* UIManager = GetGameInstance()->GetSubsystem<URPGUIManagerSubsystem>())
 	{
 		//UIManager->ShowHUD(this);
-		UE_LOG(LogTemp, Log, TEXT("RPGPlayerController::BeginPlay - ShowHUD called"));
+		Debug::Log(TEXT("[PlayerController] BeginPlay - ShowHUD called"));
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("RPGPlayerController::BeginPlay - URPGUIManagerSubsystem not found"));
+		Debug::PrintWarning(TEXT("[PlayerController] BeginPlay - URPGUIManagerSubsystem not found"));
 	}
 }
 

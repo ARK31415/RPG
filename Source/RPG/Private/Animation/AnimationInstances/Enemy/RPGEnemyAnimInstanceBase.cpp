@@ -73,3 +73,8 @@ void URPGEnemyAnimInstanceBase::UpdateCombatState()
 	// 当前版本：预留接口，具体状态由动画蓝图或Character同步
 	// 后续可以在这里添加基于 ASC Tag 的状态判断
 }
+
+void URPGEnemyAnimInstanceBase::SetDeadState(bool bNewDead)
+{
+	bIsDead = bNewDead;
+}

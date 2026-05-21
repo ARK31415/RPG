@@ -10,6 +10,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "HAL/IConsoleManager.h"
 #include "HAL/PlatformMemory.h"
+#include "RPGDebugHelper.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRPGEnemySpawner, Log, All)
 
@@ -355,7 +356,7 @@ void ARPGEnemySpawner::LogPoolStatus()
 	{
 		const FString Msg = FString::Printf(TEXT("[%s] Pool: %d avail / %d spawned"),
 			*GetName(), Avail, PoolSpawnedEnemies.Num() + DirectSpawnedEnemies.Num());
-		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Cyan, Msg);
+		Debug::Print(Msg);
 	}
 }
 

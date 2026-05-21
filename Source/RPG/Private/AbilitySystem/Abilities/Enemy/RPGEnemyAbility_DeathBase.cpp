@@ -4,14 +4,12 @@
 #include "Character/RPGEnemyCharacter.h"
 #include "Component/Combat/EnemyCombatComponent.h"
 #include "AbilitySystemComponent.h"
-#include "AIController.h"
-#include "BrainComponent.h"
+#include "RPGDebugHelper.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRPGEnemyDeath, Log, All)
 
 URPGEnemyAbility_DeathBase::URPGEnemyAbility_DeathBase()
 {
-	EnemyDestroyDelay = 5.0f;
 }
 
 ARPGEnemyCharacter* URPGEnemyAbility_DeathBase::GetEnemyCharacterFromActorInfo() const
@@ -34,7 +32,7 @@ UEnemyCombatComponent* URPGEnemyAbility_DeathBase::GetEnemyCombatComponentFromAc
 
 void URPGEnemyAbility_DeathBase::StartDeathSequence_Implementation(AActor* AvatarActor)
 {
-	// 先执行共享死亡逻辑（禁用碰撞、停止移动、通知接口）
+	// 调用父类（会触发 IPawnDeathInterface::OnDeathStarted）
 	Super::StartDeathSequence_Implementation(AvatarActor);
 
 	ARPGEnemyCharacter* EnemyCharacter = Cast<ARPGEnemyCharacter>(AvatarActor);
@@ -44,23 +42,15 @@ void URPGEnemyAbility_DeathBase::StartDeathSequence_Implementation(AActor* Avata
 	}
 
 	UE_LOG(LogRPGEnemyDeath, Log, TEXT("Enemy DeathStarted: %s"), *EnemyCharacter->GetName());
+	Debug::Print(FString::Printf(TEXT("[Death] EnemyAbility::StartDeathSequence - %s"), *EnemyCharacter->GetName()));
 
-	// 停止 AI 行为树
-	if (AAIController* AIController = Cast<AAIController>(EnemyCharacter->GetController()))
-	{
-		if (UBrainComponent* BrainComp = AIController->GetBrainComponent())
-		{
-			BrainComp->StopLogic(TEXT("Death"));
-		}
-	}
-
-	// 调用蓝图可重写钩子
+	// 调用蓝图可重写钩子（用于特效、掉落物等）
 	OnEnemyDeathStarted(EnemyCharacter);
 }
 
 void URPGEnemyAbility_DeathBase::FinishDeathSequence_Implementation(AActor* AvatarActor)
 {
-	// 先执行共享死亡完成逻辑
+	// 调用父类（会触发 IPawnDeathInterface::OnDeathFinished）
 	Super::FinishDeathSequence_Implementation(AvatarActor);
 
 	ARPGEnemyCharacter* EnemyCharacter = Cast<ARPGEnemyCharacter>(AvatarActor);
@@ -70,11 +60,9 @@ void URPGEnemyAbility_DeathBase::FinishDeathSequence_Implementation(AActor* Avat
 	}
 
 	UE_LOG(LogRPGEnemyDeath, Log, TEXT("Enemy DeathFinished: %s"), *EnemyCharacter->GetName());
+	Debug::Print(FString::Printf(TEXT("[Death] EnemyAbility::FinishDeathSequence - %s"), *EnemyCharacter->GetName()));
 
-	// 设置延迟销毁
-	EnemyCharacter->SetLifeSpan(EnemyDestroyDelay);
-
-	// 调用蓝图可重写钩子
+	// 调用蓝图可重写钩子（用于经验值、任务更新等）
 	OnEnemyDeathFinished(EnemyCharacter);
 }
 

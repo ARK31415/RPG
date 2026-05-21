@@ -13,10 +13,12 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Animation/AnimInstance.h"
+#include "Animation/AnimationInstances/Enemy/RPGEnemyAnimInstanceBase.h"
 #include "RPGGameplayTags.h"
 #include "Component/Health/RPGEnemyHealthComponent.h"
 #include "Component/UI/RPGEnemyUIComponent.h"
 #include "Subsystem/RPGEnemyPoolSubsystem.h"
+#include "RPGDebugHelper.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRPGEnemyCharacter, Log, All)
 
@@ -139,11 +141,30 @@ void ARPGEnemyCharacter::InitializeEnemyConfig()
 
 void ARPGEnemyCharacter::OnDeathStarted_Implementation()
 {
+	// 职责：仅处理"立即禁用交互"表现逻辑（碰撞/移动/AI/战斗）
+	// 注意：不能在此处设置 bPauseAnims=true，否则后续的死亡 Montage 无法推进。
+	// 动画姿势锁定交由 OnDeathFinished 处理。
 	UE_LOG(LogRPGEnemyCharacter, Warning, TEXT("[Enemy] OnDeathStarted() called on %s"), *GetName());
+	Debug::Print(FString::Printf(TEXT("[Death] Enemy::OnDeathStarted - %s, IsHidden=%s"), *GetName(), IsHidden() ? TEXT("true") : TEXT("false")));
 
-	// 敌人特有逻辑（碰撞/移动禁用已由 Death GA 处理）
 
-	// 1. 通知 AI 控制器更新 Blackboard
+	// 1. 禁用胶囊体碰撞
+	if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+	{
+		Capsule->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		Capsule->SetCollisionResponseToAllChannels(ECR_Ignore);
+		UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[Enemy] Disabled capsule collision"));
+	}
+
+	// 2. 停止移动组件
+	if (UCharacterMovementComponent* MovementComp = GetCharacterMovement())
+	{
+		MovementComp->StopMovementImmediately();
+		MovementComp->SetMovementMode(MOVE_None);
+		UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[Enemy] Stopped movement component"));
+	}
+
+	// 3. 停止 AI 行为树
 	if (CachedAIController.IsValid())
 	{
 		UBlackboardComponent* Blackboard = CachedAIController->GetBlackboardComponent();
@@ -152,26 +173,41 @@ void ARPGEnemyCharacter::OnDeathStarted_Implementation()
 			Blackboard->SetValueAsBool(FName("Dead"), true);
 			UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[Enemy] Set Blackboard Dead = true"));
 		}
+
+		if (UBrainComponent* BrainComp = CachedAIController->GetBrainComponent())
+		{
+			BrainComp->StopLogic(TEXT("Death"));
+			UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[Enemy] Stopped AI behavior tree"));
+		}
 	}
 
-	// 2. 禁用战斗组件
+	// 4. 禁用战斗组件
 	if (EnemyCombatComponent)
 	{
 		EnemyCombatComponent->SetComponentTickEnabled(false);
 		UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[Enemy] Disabled EnemyCombatComponent"));
 	}
-
-	// 3. 死亡动画通过 AnimBlueprint 检测 Shared_Status_Dead Tag 自动播放
 }
 
 void ARPGEnemyCharacter::OnDeathFinished_Implementation()
 {
+	// 职责：Montage 已播完，锁定姿势 + 回收/销毁
 	UE_LOG(LogRPGEnemyCharacter, Warning, TEXT("[Enemy] OnDeathFinished() called on %s"), *GetName());
+	Debug::Print(FString::Printf(TEXT("[Death] Enemy::OnDeathFinished - %s, IsHidden=%s"), *GetName(), IsHidden() ? TEXT("true") : TEXT("false")));
+
+	// 1. 锁定死亡姿势：Montage 已播完，此时暂停 Mesh 动画作为防御措施
+	if (USkeletalMeshComponent* MeshComp = GetMesh())
+	{
+		MeshComp->bPauseAnims = true;
+		UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[Enemy] Locked death pose (bPauseAnims = true)"));
+		Debug::Print(FString::Printf(TEXT("[Death] Lock Pose - %s, bPauseAnims=true"), *GetName()));
+	}
 
 	// TODO: 敌人死亡后的逻辑
 	// 1. 掉落物品
 	// 2. 给予经验值
 	// 3. 播放音效
+
 
 	// 根据 Tag 判断敌人来源，决定回收方式
 	if (UWorld* World = GetWorld())
@@ -183,6 +219,7 @@ void ARPGEnemyCharacter::OnDeathFinished_Implementation()
 			{
 				Pool->ReleaseEnemy(this);
 				UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[Enemy] Released to pool: %s"), *GetName());
+				Debug::Print(FString::Printf(TEXT("[Death] Enemy Released to Pool - %s"), *GetName()));
 				return;
 			}
 		}
@@ -191,4 +228,5 @@ void ARPGEnemyCharacter::OnDeathFinished_Implementation()
 	// 回退：Pool 不可用或普通生成的敌人，直接销毁
 	SetLifeSpan(0.1f);
 	UE_LOG(LogRPGEnemyCharacter, Warning, TEXT("[Enemy] No pool or direct spawn, SetLifeSpan(0.1s): %s"), *GetName());
+	Debug::Print(FString::Printf(TEXT("[Death] Enemy SetLifeSpan(0.1s) -> Destroy - %s"), *GetName()));
 }

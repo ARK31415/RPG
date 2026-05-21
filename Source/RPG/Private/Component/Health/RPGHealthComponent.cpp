@@ -5,6 +5,7 @@
 #include "AbilitySystem/RPGAttributeSet.h"
 #include "Character/BaseCharacter.h"
 #include "RPGGameplayTags.h"
+#include "RPGDebugHelper.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRPGHealthComponent, Log, All)
 
@@ -121,6 +122,7 @@ void URPGHealthComponent::StartDeath()
 	bIsDead = true;
 	
 	UE_LOG(LogRPGHealthComponent, Log, TEXT("StartDeath: %s"), *GetOwner()->GetName());
+	Debug::Print(FString::Printf(TEXT("[Death] HealthComponent::StartDeath - %s, Health=%.1f"), *GetOwner()->GetName(), CurrentHealth));
 
 	// 通过 GameplayEvent 触发死亡 GA（如果 ASC 存在且已授予死亡能力）
 	if (AbilitySystemComponent)
@@ -135,10 +137,12 @@ void URPGHealthComponent::StartDeath()
 		);
 		
 		UE_LOG(LogRPGHealthComponent, Log, TEXT("Sent GameplayEvent Shared.Event.Death to trigger Death GA"));
+		Debug::Print(FString::Printf(TEXT("[Death] GameplayEvent Sent -> Shared.Event.Death for %s"), *GetOwner()->GetName()));
 	}
 	else
 	{
 		// Fallback: 如果没有 ASC，直接通过旧接口通知（兼容性）
+		Debug::PrintWarning(FString::Printf(TEXT("[Death] No ASC! Fallback to direct interface for %s"), *GetOwner()->GetName()));
 		if (AActor* Owner = GetOwner())
 		{
 			if (IPawnDeathInterface* DeathInterface = Cast<IPawnDeathInterface>(Owner))

@@ -8,7 +8,17 @@
 /**
  * Pawn Death Interface
  * 职责：定义死亡事件的接口，由 Character 实现
- * HealthComponent 在检测到死亡时调用此接口通知 Owner
+ * 
+ * Ability 在检测到死亡时调用此接口通知 Character
+ * Character 应在 OnDeathStarted 中处理：
+ *   - 禁用碰撞、停止移动
+ *   - 暂停动画（bPauseAnims）
+ *   - 停止 AI 行为树
+ *   - 禁用战斗组件
+ * 
+ * Character 应在 OnDeathFinished 中处理：
+ *   - 对象池回收（ReleaseEnemy）
+ *   - 或直接销毁（SetLifeSpan）
  */
 UINTERFACE(MinimalAPI)
 class UPawnDeathInterface : public UInterface

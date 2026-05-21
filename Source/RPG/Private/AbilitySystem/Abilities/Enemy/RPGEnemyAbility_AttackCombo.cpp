@@ -7,6 +7,7 @@
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "AbilitySystem/RPGAttributeSet.h"
+#include "RPGDebugHelper.h"
 
 URPGEnemyAbility_AttackCombo::URPGEnemyAbility_AttackCombo()
 {
@@ -18,7 +19,7 @@ void URPGEnemyAbility_AttackCombo::ActivateAbility(const FGameplayAbilitySpecHan
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
-	UE_LOG(LogTemp, Log, TEXT("[EnemyAttackCombo] Activated: %s"), *GetName());
+	Debug::Log(FString::Printf(TEXT("[EnemyAttackCombo] Activated: %s"), *GetName()));
 
 	// 监听 MeleeHit 事件
 	WaitMeleeHitEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
@@ -33,7 +34,7 @@ void URPGEnemyAbility_AttackCombo::ActivateAbility(const FGameplayAbilitySpecHan
 	{
 		WaitMeleeHitEventTask->EventReceived.AddDynamic(this, &URPGEnemyAbility_AttackCombo::HandleApplyDamage);
 		WaitMeleeHitEventTask->ReadyForActivation();
-		UE_LOG(LogTemp, Log, TEXT("[EnemyAttackCombo] WaitMeleeHitEventTask activated"));
+		Debug::Log(TEXT("[EnemyAttackCombo] WaitMeleeHitEventTask activated"));
 	}
 
 	ResetComboState();
@@ -57,13 +58,13 @@ void URPGEnemyAbility_AttackCombo::AdvanceCombo()
 {
 	if (!CanContinueCombo())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[EnemyAttackCombo] Cannot advance combo - Max reached: %d"), CurrentComboIndex);
+		Debug::PrintWarning(FString::Printf(TEXT("[EnemyAttackCombo] Cannot advance combo - Max reached: %d"), CurrentComboIndex));
 		return;
 	}
 
 	CurrentComboIndex++;
 
-	UE_LOG(LogTemp, Log, TEXT("[EnemyAttackCombo] Advanced to combo index: %d"), CurrentComboIndex);
+	Debug::Log(FString::Printf(TEXT("[EnemyAttackCombo] Advanced to combo index: %d"), CurrentComboIndex));
 
 	PlayCurrentComboMontage();
 }
@@ -77,15 +78,15 @@ void URPGEnemyAbility_AttackCombo::ResetComboState()
 {
 	CurrentComboIndex = 0;
 
-	UE_LOG(LogTemp, Log, TEXT("[EnemyAttackCombo] Reset combo state"));
+	Debug::Log(TEXT("[EnemyAttackCombo] Reset combo state"));
 }
 
 void URPGEnemyAbility_AttackCombo::PlayCurrentComboMontage()
 {
 	if (ComboMontages.Num() == 0 || CurrentComboIndex >= ComboMontages.Num())
 	{
-		UE_LOG(LogTemp, Error, TEXT("[EnemyAttackCombo] No valid montage for index %d (Total: %d)"), 
-			CurrentComboIndex, ComboMontages.Num());
+		Debug::PrintError(FString::Printf(TEXT("[EnemyAttackCombo] No valid montage for index %d (Total: %d)"), 
+			CurrentComboIndex, ComboMontages.Num()));
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 		return;
 	}
@@ -93,7 +94,7 @@ void URPGEnemyAbility_AttackCombo::PlayCurrentComboMontage()
 	UAnimMontage* MontageToPlay = ComboMontages[CurrentComboIndex];
 	if (!MontageToPlay)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[EnemyAttackCombo] Montage at index %d is null"), CurrentComboIndex);
+		Debug::PrintError(FString::Printf(TEXT("[EnemyAttackCombo] Montage at index %d is null"), CurrentComboIndex));
 		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
 		return;
 	}
