@@ -12,6 +12,7 @@
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/WidgetComponent.h"
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimationInstances/Enemy/RPGEnemyAnimInstanceBase.h"
 #include "RPGGameplayTags.h"
@@ -19,6 +20,7 @@
 #include "Component/UI/RPGEnemyUIComponent.h"
 #include "Subsystem/RPGEnemyPoolSubsystem.h"
 #include "RPGDebugHelper.h"
+#include "UI/Widget/RPGEnemyHealthBarWidget.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRPGEnemyCharacter, Log, All)
 
@@ -57,6 +59,16 @@ ARPGEnemyCharacter::ARPGEnemyCharacter()
 
 	// 创建敌人 UI 组件
 	EnemyUIComponent = CreateDefaultSubobject<URPGEnemyUIComponent>(TEXT("EnemyUIComponent"));
+
+	// 创建头顶血条 WidgetComponent（仅场景挂载，Widget 逻辑由 EnemyUIComponent 管理）
+	HealthBarWidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBarWidget"));
+	HealthBarWidgetComponent->SetupAttachment(GetMesh());
+	HealthBarWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+	HealthBarWidgetComponent->SetDrawAtDesiredSize(true);
+	HealthBarWidgetComponent->SetRelativeLocation(FVector(0.f, 0.f, 120.f));
+	HealthBarWidgetComponent->SetVisibility(false);
+
+
 }
 
 UAbilitySystemComponent* ARPGEnemyCharacter::GetAbilitySystemComponent() const
@@ -67,6 +79,20 @@ UAbilitySystemComponent* ARPGEnemyCharacter::GetAbilitySystemComponent() const
 UPawnCombatComponent* ARPGEnemyCharacter::GetPawnCombatComponent() const
 {
 	return EnemyCombatComponent;
+}
+
+void ARPGEnemyCharacter::OnEnemyActivated()
+{
+	// 统一协调所有组件的激活后重置
+
+	// UI 组件：重新初始化血条 Widget
+	if (EnemyUIComponent)
+	{
+		EnemyUIComponent->ResetHealthBarWidget();
+	}
+
+	// 未来可扩展：其他组件的激活后逻辑
+	// 例如：CombatComponent->ResetCooldowns() 等
 }
 
 
@@ -145,7 +171,7 @@ void ARPGEnemyCharacter::OnDeathStarted_Implementation()
 	// 注意：不能在此处设置 bPauseAnims=true，否则后续的死亡 Montage 无法推进。
 	// 动画姿势锁定交由 OnDeathFinished 处理。
 	UE_LOG(LogRPGEnemyCharacter, Warning, TEXT("[Enemy] OnDeathStarted() called on %s"), *GetName());
-	Debug::Print(FString::Printf(TEXT("[Death] Enemy::OnDeathStarted - %s, IsHidden=%s"), *GetName(), IsHidden() ? TEXT("true") : TEXT("false")));
+	Debug::Print(FString::Printf(TEXT("[Death-EnemyChar] OnDeathStarted - %s"), *GetName()));
 
 
 	// 1. 禁用胶囊体碰撞
@@ -193,14 +219,14 @@ void ARPGEnemyCharacter::OnDeathFinished_Implementation()
 {
 	// 职责：Montage 已播完，锁定姿势 + 回收/销毁
 	UE_LOG(LogRPGEnemyCharacter, Warning, TEXT("[Enemy] OnDeathFinished() called on %s"), *GetName());
-	Debug::Print(FString::Printf(TEXT("[Death] Enemy::OnDeathFinished - %s, IsHidden=%s"), *GetName(), IsHidden() ? TEXT("true") : TEXT("false")));
+	Debug::Print(FString::Printf(TEXT("[Death-EnemyChar] OnDeathFinished - %s"), *GetName()));
 
 	// 1. 锁定死亡姿势：Montage 已播完，此时暂停 Mesh 动画作为防御措施
 	if (USkeletalMeshComponent* MeshComp = GetMesh())
 	{
 		MeshComp->bPauseAnims = true;
 		UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[Enemy] Locked death pose (bPauseAnims = true)"));
-		Debug::Print(FString::Printf(TEXT("[Death] Lock Pose - %s, bPauseAnims=true"), *GetName()));
+		Debug::Log(FString::Printf(TEXT("[Death-EnemyChar] LockPose - %s, bPauseAnims=true"), *GetName()));
 	}
 
 	// TODO: 敌人死亡后的逻辑
@@ -219,7 +245,7 @@ void ARPGEnemyCharacter::OnDeathFinished_Implementation()
 			{
 				Pool->ReleaseEnemy(this);
 				UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[Enemy] Released to pool: %s"), *GetName());
-				Debug::Print(FString::Printf(TEXT("[Death] Enemy Released to Pool - %s"), *GetName()));
+				Debug::Log(FString::Printf(TEXT("[Death-EnemyChar] ReleasedToPool - %s"), *GetName()));
 				return;
 			}
 		}
@@ -228,5 +254,5 @@ void ARPGEnemyCharacter::OnDeathFinished_Implementation()
 	// 回退：Pool 不可用或普通生成的敌人，直接销毁
 	SetLifeSpan(0.1f);
 	UE_LOG(LogRPGEnemyCharacter, Warning, TEXT("[Enemy] No pool or direct spawn, SetLifeSpan(0.1s): %s"), *GetName());
-	Debug::Print(FString::Printf(TEXT("[Death] Enemy SetLifeSpan(0.1s) -> Destroy - %s"), *GetName()));
+	Debug::Log(FString::Printf(TEXT("[Death-EnemyChar] SetLifeSpan(0.1s) -> Destroy - %s"), *GetName()));
 }

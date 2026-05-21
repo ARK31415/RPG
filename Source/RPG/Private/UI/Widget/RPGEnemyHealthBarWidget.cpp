@@ -2,6 +2,8 @@
 
 #include "UI/Widget/RPGEnemyHealthBarWidget.h"
 #include "Component/UI/RPGEnemyUIComponent.h"
+#include "Components/ProgressBar.h"
+#include "Components/TextBlock.h"
 #include "Components/Widget.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogRPGEnemyHealthBarWidget, Log, All)
@@ -23,6 +25,7 @@ void URPGEnemyHealthBarWidget::InitEnemyCreatedWidget(AActor* OwningEnemyActor)
 		{
 			EnemyUIComponent = UIComp;
 			BP_OnEnemyUIComponentInitialized(UIComp);
+			SubscribeToEvents();
 			
 			UE_LOG(LogRPGEnemyHealthBarWidget, Log, TEXT("EnemyHealthBarWidget: EnemyUIComponent acquired for %s"), 
 				*OwningEnemyActor->GetName());
@@ -43,6 +46,20 @@ void URPGEnemyHealthBarWidget::InitEnemyCreatedWidget(AActor* OwningEnemyActor)
 void URPGEnemyHealthBarWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+
+	// 验证组件绑定(开发期调试用)
+	if (!HealthBar)
+	{
+		UE_LOG(LogRPGEnemyHealthBarWidget, Error, TEXT("HealthBar is not bound in Blueprint"));
+	}
+	if (!HealthText)
+	{
+		UE_LOG(LogRPGEnemyHealthBarWidget, Warning, TEXT("HealthText is not bound in Blueprint"));
+	}
+	if (!EnemyNameText)
+	{
+		UE_LOG(LogRPGEnemyHealthBarWidget, Warning, TEXT("EnemyNameText is not bound in Blueprint"));
+	}
 
 	// 如果已经绑定了 EnemyUIComponent，订阅事件
 	if (EnemyUIComponent.IsValid())
@@ -71,12 +88,10 @@ void URPGEnemyHealthBarWidget::SubscribeToEvents()
 		return;
 	}
 
-	// 订阅生命值变化（使用 AddUniqueDynamic）
 	EnemyUIComponent->OnHealthChangedForUI.AddUniqueDynamic(
 		this, &URPGEnemyHealthBarWidget::OnEnemyHealthChangedDynamic);
 
-	// 初始化显示
-	OnEnemyHealthChangedDynamic(EnemyUIComponent->GetCurrentHealth(), EnemyUIComponent->GetMaxHealth());
+	UpdateWidgetValues();
 
 	UE_LOG(LogRPGEnemyHealthBarWidget, Log, TEXT("Subscribed to EnemyUIComponent events"));
 }
@@ -88,12 +103,7 @@ void URPGEnemyHealthBarWidget::OnEnemyHealthChangedDynamic(float NewHealth, floa
 		return;
 	}
 
-	float MaxHealth = EnemyUIComponent->GetMaxHealth();
-
-	// 调用蓝图实现的血条更新
-	BP_UpdateHealthBar(NewHealth, MaxHealth);
-
-	// 更新可见性
+	UpdateWidgetValues();
 	UpdateVisibility();
 }
 
@@ -104,12 +114,50 @@ void URPGEnemyHealthBarWidget::UpdateVisibility()
 		return;
 	}
 
-	// 使用 EnemyUIComponent 的可见性判断逻辑
 	bool bShouldShow = EnemyUIComponent->ShouldShowHealthBar();
-	
-	// 设置 Widget 可见性
+
 	if (UWidget* RootWidget = GetRootWidget())
 	{
 		RootWidget->SetVisibility(bShouldShow ? ESlateVisibility::Visible : ESlateVisibility::Hidden);
 	}
+}
+
+void URPGEnemyHealthBarWidget::UpdateWidgetValues()
+{
+	if (!EnemyUIComponent.IsValid())
+	{
+		return;
+	}
+
+	const float CurrentHealth = EnemyUIComponent->GetCurrentHealth();
+	const float MaxHealth = EnemyUIComponent->GetMaxHealth();
+	const float Percent = EnemyUIComponent->GetHealthPercent();
+
+	UE_LOG(LogRPGEnemyHealthBarWidget, Log,
+		TEXT("UpdateWidgetValues: Health=%.0f/%.0f (%.0f%%), HealthBar=%s, HealthText=%s, EnemyNameText=%s, Name=%s"),
+		CurrentHealth, MaxHealth, Percent * 100.f,
+		HealthBar ? TEXT("Valid") : TEXT("NULL"),
+		HealthText ? TEXT("Valid") : TEXT("NULL"),
+		EnemyNameText ? TEXT("Valid") : TEXT("NULL"),
+		*EnemyUIComponent->GetEnemyDisplayName());
+
+	if (HealthBar)
+	{
+		HealthBar->SetPercent(Percent);
+	}
+
+	if (HealthText)
+	{
+		HealthText->SetText(FText::FromString(
+			FString::Printf(TEXT("%.0f/%.0f"), CurrentHealth, MaxHealth)));
+	}
+
+	if (EnemyNameText)
+	{
+		EnemyNameText->SetText(FText::FromString(
+			EnemyUIComponent->GetEnemyDisplayName()));
+	}
+
+	BP_OnEnemyUIComponentInitialized(EnemyUIComponent.Get());
+	BP_UpdateHealthBar(CurrentHealth, MaxHealth);
 }

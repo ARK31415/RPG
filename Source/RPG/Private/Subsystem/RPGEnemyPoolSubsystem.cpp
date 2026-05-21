@@ -261,6 +261,9 @@ void URPGEnemyPoolSubsystem::ActivateEnemy(ARPGEnemyCharacter* Enemy, const FTra
 
 	// 触发 AI 重新接管
 	Enemy->SpawnDefaultController();
+
+	// 通知 Character 完成激活后的统一初始化（由 Character 协调所有组件）
+	Enemy->OnEnemyActivated();
 	
 	UE_LOG(LogRPGEnemyPool, Log, TEXT("ActivateEnemy: [%s] activated at %s"), 
 		*Enemy->GetName(), *SpawnTransform.GetLocation().ToString());

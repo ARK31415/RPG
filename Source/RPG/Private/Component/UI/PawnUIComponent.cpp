@@ -3,7 +3,7 @@
 #include "Component/UI/PawnUIComponent.h"
 #include "Component/Health/RPGHealthComponent.h"
 
-DEFINE_LOG_CATEGORY_STATIC(LogPawnUIComponent, Log, All)
+DEFINE_LOG_CATEGORY_STATIC(LogRPGPawnUIComponent, Log, All)
 
 UPawnUIComponent::UPawnUIComponent()
 {
@@ -56,12 +56,12 @@ void UPawnUIComponent::BeginPlay()
 	if (HealthComponent)
 	{
 		SubscribeToHealthComponent();
-		UE_LOG(LogPawnUIComponent, Log, TEXT("PawnUIComponent: Subscribed to HealthComponent for %s"), 
+		UE_LOG(LogRPGPawnUIComponent, Log, TEXT("PawnUIComponent: Subscribed to HealthComponent for %s"), 
 			*GetOwner()->GetName());
 	}
 	else
 	{
-		UE_LOG(LogPawnUIComponent, Warning, TEXT("PawnUIComponent: No HealthComponent found for %s"), 
+		UE_LOG(LogRPGPawnUIComponent, Warning, TEXT("PawnUIComponent: No HealthComponent found for %s"), 
 			*GetOwner()->GetName());
 	}
 }

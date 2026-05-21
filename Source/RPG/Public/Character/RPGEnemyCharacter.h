@@ -15,6 +15,7 @@ class UBehaviorTree;
 class ARPGEnemyAIController;
 class URPGEnemyUIComponent;
 class URPGHealthComponent;
+class UWidgetComponent;
 
 /**
  * Enemy Character Base Class - 用于敌人的ASC和属性管理
@@ -33,6 +34,9 @@ public:
 
 	// IPawnUIInterface implementation
 	virtual URPGEnemyUIComponent* GetEnemyUIComponent() override { return EnemyUIComponent; }
+
+	/** 对象池激活后统一初始化入口（由对象池调用） */
+	void OnEnemyActivated();
 
 	// Getter functions for ASC and AttributeSet
 	UFUNCTION(BlueprintPure, Category = "RPG|AbilitySystem")
@@ -79,6 +83,16 @@ private:
 
 	// 缓存的AI控制器引用
 	TWeakObjectPtr<ARPGEnemyAIController> CachedAIController;
+
+	/** 头顶血条 WidgetComponent（场景挂载，逻辑由 EnemyUIComponent 管理） */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="UI", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UWidgetComponent> HealthBarWidgetComponent;
+
+	/** 血条 Widget 蓝图类（可在蓝图子类中覆盖） */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="UI", meta=(AllowPrivateAccess="true"))
+	TSubclassOf<UUserWidget> HealthBarWidgetClass;
+
+	friend class URPGEnemyUIComponent;  // 允许 UIComponent 访问 HealthBarWidgetClass
 
 	// Initialize startup data (grant abilities and effects)
 	void InitializeStartupData();

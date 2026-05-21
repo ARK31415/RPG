@@ -6,6 +6,8 @@
 #include "Component/UI/PawnUIComponent.h"
 #include "RPGEnemyUIComponent.generated.h"
 
+class UUserWidget;
+
 /**
  * Enemy UI Component
  * 职责：敌人特有的 UI 数据桥接（名称、等级、距离检测、血条可见性等）
@@ -29,6 +31,14 @@ public:
 	/** 获取敌人等级 */
 	UFUNCTION(BlueprintPure, Category="Enemy UI")
 	int32 GetEnemyLevel() const;
+
+	/** 初始化血条 Widget（BeginPlay 和对象池激活时调用） */
+	UFUNCTION(BlueprintCallable, Category="Enemy UI")
+	void InitializeHealthBarWidget();
+
+	/** 重置血条 Widget（对象池重新激活时调用） */
+	UFUNCTION(BlueprintCallable, Category="Enemy UI")
+	void ResetHealthBarWidget();
 
 protected:
 	virtual URPGHealthComponent* GetHealthComponentInternal() const override;
@@ -55,4 +65,11 @@ private:
 	/** 敌人等级 */
 	UPROPERTY(EditDefaultsOnly, Category="Enemy UI|Display")
 	int32 EnemyLevel;
+
+	/** 缓存 WidgetComponent 引用（从 Owner 获取） */
+	TWeakObjectPtr<class UWidgetComponent> CachedHealthBarWidgetComponent;
+
+	/** 血条 Widget 蓝图类（优先使用，未设置时回退到 Character::HealthBarWidgetClass） */
+	UPROPERTY(EditDefaultsOnly, Category="Enemy UI|Widget")
+	TSubclassOf<UUserWidget> HealthBarWidgetClass;
 };

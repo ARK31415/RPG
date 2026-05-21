@@ -51,7 +51,7 @@ void URPGSharedAbility_Death::ActivateAbility(const FGameplayAbilitySpecHandle H
 	}
 
 	UE_LOG(LogRPGDeathAbility, Log, TEXT("Death GA activated for %s"), *AvatarActor->GetName());
-	Debug::Print(FString::Printf(TEXT("[Death] GA Activated - %s"), *AvatarActor->GetName()));
+	Debug::Print(FString::Printf(TEXT("[Death-SharedDeathGA] Activate - %s"), *AvatarActor->GetName()));
 
 	// 执行死亡开始序列
 	StartDeathSequence(AvatarActor);
@@ -101,7 +101,7 @@ void URPGSharedAbility_Death::EndAbility(const FGameplayAbilitySpecHandle Handle
 void URPGSharedAbility_Death::StartDeathSequence_Implementation(AActor* AvatarActor)
 {
 	UE_LOG(LogRPGDeathAbility, Log, TEXT("StartDeathSequence for %s"), *AvatarActor->GetName());
-	Debug::Print(FString::Printf(TEXT("[Death] StartDeathSequence - %s"), *AvatarActor->GetName()));
+	Debug::Print(FString::Printf(TEXT("[Death-SharedDeathGA] StartDeathSeq - %s"), *AvatarActor->GetName()));
 
 	// 通知 Character 处理死亡表现逻辑（碰撞、移动、动画、AI 等）
 	if (AvatarActor->GetClass()->ImplementsInterface(UPawnDeathInterface::StaticClass()))
@@ -113,7 +113,7 @@ void URPGSharedAbility_Death::StartDeathSequence_Implementation(AActor* AvatarAc
 void URPGSharedAbility_Death::FinishDeathSequence_Implementation(AActor* AvatarActor)
 {
 	UE_LOG(LogRPGDeathAbility, Log, TEXT("FinishDeathSequence for %s"), *AvatarActor->GetName());
-	Debug::Print(FString::Printf(TEXT("[Death] FinishDeathSequence - %s, IsHidden=%s"), *AvatarActor->GetName(), AvatarActor->IsHidden() ? TEXT("true") : TEXT("false")));
+	Debug::Print(FString::Printf(TEXT("[Death-SharedDeathGA] FinishDeathSeq - %s, IsHidden=%s"), *AvatarActor->GetName(), AvatarActor->IsHidden() ? TEXT("true") : TEXT("false")));
 
 	// 通知旧接口（兼容现有逻辑，如设置 LifeSpan）
 	if (AvatarActor->GetClass()->ImplementsInterface(UPawnDeathInterface::StaticClass()))
@@ -145,7 +145,7 @@ void URPGSharedAbility_Death::PlayDeathMontage(FGameplayTag DeathDirection)
 	{
 		UE_LOG(LogRPGDeathAbility, Log, TEXT("Playing death montage: %s, Direction: %s"),
 			*MontageToPlay->GetName(), *DeathDirection.ToString());
-		Debug::Print(FString::Printf(TEXT("[Death] PlayDeathMontage - %s, Dir=%s"), *MontageToPlay->GetName(), *DeathDirection.ToString()));
+		Debug::Log(FString::Printf(TEXT("[Death-SharedDeathGA] PlayMontage - %s, Dir=%s"), *MontageToPlay->GetName(), *DeathDirection.ToString()));
 
 		UAbilityTask_PlayMontageAndWait* MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
 			this,
@@ -167,7 +167,7 @@ void URPGSharedAbility_Death::PlayDeathMontage(FGameplayTag DeathDirection)
 	{
 		// Fallback：没有配置蒙太奇时，使用 Timer 延迟后完成死亡
 		UE_LOG(LogRPGDeathAbility, Warning, TEXT("No death montage configured, using fallback Timer (%f seconds)."), DeathFinishDelay);
-		Debug::PrintWarning(FString::Printf(TEXT("[Death] No Montage! Fallback Timer %.1fs"), DeathFinishDelay));
+		Debug::PrintWarning(FString::Printf(TEXT("[Death-SharedDeathGA] NoMontage! Fallback %.1fs"), DeathFinishDelay));
 
 		if (AActor* AvatarActor = GetAvatarActorFromActorInfo())
 		{
@@ -202,7 +202,7 @@ void URPGSharedAbility_Death::OnDeathMontageCompleted()
 	{
 		// 动画播放完毕立即隐藏 Actor（避免静止尸体可见）
 		AvatarActor->SetActorHiddenInGame(true);
-		Debug::Print(FString::Printf(TEXT("[Death] MontageCompleted - %s, SetHidden=true"), *AvatarActor->GetName()));
+		Debug::Print(FString::Printf(TEXT("[Death-SharedDeathGA] MontageCompleted - %s, SetHidden=true"), *AvatarActor->GetName()));
 
 		// 继续执行后续死亡逻辑（经验奖励、掉落物、LifeSpan 等）
 		FinishDeathSequence(AvatarActor);
@@ -222,7 +222,7 @@ void URPGSharedAbility_Death::OnDeathMontageInterrupted()
 	{
 		// 动画被中断也立即隐藏 Actor
 		AvatarActor->SetActorHiddenInGame(true);
-		Debug::PrintWarning(FString::Printf(TEXT("[Death] MontageInterrupted - %s, SetHidden=true"), *AvatarActor->GetName()));
+		Debug::PrintWarning(FString::Printf(TEXT("[Death-SharedDeathGA] MontageInterrupted - %s, SetHidden=true"), *AvatarActor->GetName()));
 
 		FinishDeathSequence(AvatarActor);
 	}

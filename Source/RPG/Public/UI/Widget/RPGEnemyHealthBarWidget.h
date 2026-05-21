@@ -30,6 +30,22 @@ protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
 
+	// ================================================================
+	//  UMG 绑定控件（由蓝图设计器绑定）
+	// ================================================================
+
+	/** 血量进度条 */
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	class UProgressBar* HealthBar;
+
+	/** 血量数值文本 */
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	class UTextBlock* HealthText;
+
+	/** 敌人名称文本 */
+	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+	class UTextBlock* EnemyNameText;
+
 	/** 当 EnemyUIComponent 初始化完成时调用（蓝图实现） */
 	UFUNCTION(BlueprintImplementableEvent, Category="UI")
 	void BP_OnEnemyUIComponentInitialized(URPGEnemyUIComponent* NewEnemyUIComponent);
@@ -51,4 +67,7 @@ private:
 
 	/** 更新血条可见性 */
 	void UpdateVisibility();
+
+	/** 直接更新所有控件值（C++ 层，不依赖蓝图） */
+	void UpdateWidgetValues();
 };
