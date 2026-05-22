@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "UI/Widget/RPGMainMenuWidget.h"
 #include "CommonActivatableWidget.h"
 #include "Widgets/CommonActivatableWidgetContainer.h"
@@ -19,31 +17,41 @@ DEFINE_LOG_CATEGORY_STATIC(LogRPGMainMenuWidget, All, All)
 URPGMainMenuWidget::URPGMainMenuWidget(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-	// 设置默认值
-	TitleText = nullptr;
-	StartGameButton = nullptr;
-	ExitGameButton = nullptr;
+	bIsFocusable = true;
+	UE_LOG(LogRPGMainMenuWidget, Log, TEXT("[MainMenu] Constructor called, bIsFocusable set to true"));
 }
 
 bool URPGMainMenuWidget::Initialize()
 {
+	UE_LOG(LogRPGMainMenuWidget, Log, TEXT("[MainMenu] Initialize() called"));
+
 	if (!Super::Initialize())
 	{
+		UE_LOG(LogRPGMainMenuWidget, Error, TEXT("[MainMenu] Initialize() - Super::Initialize() returned false!"));
 		return false;
 	}
 
-	// 绑定按钮点击事件
+	UE_LOG(LogRPGMainMenuWidget, Log, TEXT("[MainMenu] Initialize() - Super init OK"));
+
+	FString TitleName = TitleText ? TEXT("Found") : TEXT("NULL");
+	FString StartBtnName = StartGameButton ? TEXT("Found") : TEXT("NULL");
+	FString ExitBtnName = ExitGameButton ? TEXT("Found") : TEXT("NULL");
+
+	UE_LOG(LogRPGMainMenuWidget, Log, TEXT("[MainMenu] Initialize() - TitleText=%s, StartGameButton=%s, ExitGameButton=%s"),
+		*TitleName, *StartBtnName, *ExitBtnName);
+
 	if (StartGameButton)
 	{
 		StartGameButton->OnClicked.AddDynamic(this, &URPGMainMenuWidget::OnStartGameClicked);
+		UE_LOG(LogRPGMainMenuWidget, Log, TEXT("[MainMenu] Initialize() - StartGameButton.OnClicked bound"));
 	}
 
 	if (ExitGameButton)
 	{
 		ExitGameButton->OnClicked.AddDynamic(this, &URPGMainMenuWidget::OnExitGameClicked);
+		UE_LOG(LogRPGMainMenuWidget, Log, TEXT("[MainMenu] Initialize() - ExitGameButton.OnClicked bound"));
 	}
 
-	// 设置标题文本
 	if (TitleText)
 	{
 		TitleText->SetText(FText::FromString(TEXT("RPG Game")));
@@ -55,24 +63,33 @@ bool URPGMainMenuWidget::Initialize()
 void URPGMainMenuWidget::NativeOnActivated()
 {
 	Super::NativeOnActivated();
+	UE_LOG(LogRPGMainMenuWidget, Log, TEXT("[MainMenu] NativeOnActivated() called"));
 
-	// 确保按钮可用
+	APlayerController* PC = GetOwningPlayer();
+	UE_LOG(LogRPGMainMenuWidget, Log, TEXT("[MainMenu] NativeOnActivated() - OwningPlayer=%s"),
+		PC ? *PC->GetName() : TEXT("NULL"));
+
+	SetFocus();
+
 	if (StartGameButton)
 	{
 		StartGameButton->SetIsEnabled(true);
+		StartGameButton->SetKeyboardFocus();
+		UE_LOG(LogRPGMainMenuWidget, Log, TEXT("[MainMenu] NativeOnActivated() - StartGameButton enabled, keyboard focus set"));
 	}
 
 	if (ExitGameButton)
 	{
 		ExitGameButton->SetIsEnabled(true);
+		UE_LOG(LogRPGMainMenuWidget, Log, TEXT("[MainMenu] NativeOnActivated() - ExitGameButton enabled"));
 	}
 }
 
 void URPGMainMenuWidget::NativeOnDeactivated()
 {
 	Super::NativeOnDeactivated();
+	UE_LOG(LogRPGMainMenuWidget, Log, TEXT("[MainMenu] NativeOnDeactivated() called"));
 
-	// 清理按钮事件绑定
 	if (StartGameButton)
 	{
 		StartGameButton->OnClicked.Clear();
@@ -84,55 +101,96 @@ void URPGMainMenuWidget::NativeOnDeactivated()
 	}
 }
 
+FReply URPGMainMenuWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
+{
+	FKey Key = InKeyEvent.GetKey();
+	UE_LOG(LogRPGMainMenuWidget, Log, TEXT("[MainMenu] NativeOnKeyDown - Key=%s"), *Key.ToString());
+
+	if (Key == EKeys::S || Key == EKeys::Enter)
+	{
+		UE_LOG(LogRPGMainMenuWidget, Log, TEXT("[MainMenu] NativeOnKeyDown - KEY TEST: Starting game via keyboard"));
+		StartGame();
+		return FReply::Handled();
+	}
+
+	if (Key == EKeys::Escape || Key == EKeys::Q)
+	{
+		UE_LOG(LogRPGMainMenuWidget, Log, TEXT("[MainMenu] NativeOnKeyDown - KEY TEST: Exiting game via keyboard"));
+		ExitGame();
+		return FReply::Handled();
+	}
+
+	return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
+}
+
+FReply URPGMainMenuWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+	UE_LOG(LogRPGMainMenuWidget, Log, TEXT("[MainMenu] NativeOnMouseButtonDown - Mouse button=%s"), *InMouseEvent.GetEffectingButton().ToString());
+	return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+}
+
 void URPGMainMenuWidget::StartGame()
 {
-	// 获取 GameInstance
+	UE_LOG(LogRPGMainMenuWidget, Log, TEXT("[MainMenu] StartGame() called"));
+
 	UWorld* World = GetWorld();
 	if (!World)
 	{
-		UE_LOG(LogRPGMainMenuWidget, Warning, TEXT("URPGMainMenuWidget::StartGame - World is null"));
+		UE_LOG(LogRPGMainMenuWidget, Warning, TEXT("[MainMenu] StartGame - World is null"));
 		return;
 	}
 
 	UGameInstance* GI = World->GetGameInstance();
 	if (!GI)
 	{
-		UE_LOG(LogRPGMainMenuWidget, Warning, TEXT("URPGMainMenuWidget::StartGame - GameInstance is null"));
+		UE_LOG(LogRPGMainMenuWidget, Warning, TEXT("[MainMenu] StartGame - GameInstance is null"));
 		return;
 	}
 
-	// 获取加载子系统
 	URPGLoadingSubsystem* LoadingSubsystem = GI->GetSubsystem<URPGLoadingSubsystem>();
 	if (!LoadingSubsystem)
 	{
-		UE_LOG(LogRPGMainMenuWidget, Warning, TEXT("URPGMainMenuWidget::StartGame - LoadingSubsystem is null"));
+		UE_LOG(LogRPGMainMenuWidget, Warning, TEXT("[MainMenu] StartGame - LoadingSubsystem is null"));
 		return;
 	}
 
-	// 异步加载主关卡（含 Slate 加载画面）
-	TSoftObjectPtr<UWorld> MainLevel(FSoftObjectPath(TEXT("/Game/Maps/MainLevel")));
-	LoadingSubsystem->AsyncLoadLevel(MainLevel, true, TEXT("?listen"));
+	UE_LOG(LogRPGMainMenuWidget, Log, TEXT("[MainMenu] StartGame - LoadingSubsystem found, starting async load"));
 
-	UE_LOG(LogRPGMainMenuWidget, Log, TEXT("URPGMainMenuWidget::StartGame - Async loading MainLevel via LoadingSubsystem"));
+	TSoftObjectPtr<UWorld> MainLevel(FSoftObjectPath(TEXT("/Game/ThirdPerson/Lvl_ThirdPerson")));
+	LoadingSubsystem->AsyncLoadLevel(MainLevel, true, TEXT("?listen"));
 }
 
 void URPGMainMenuWidget::ExitGame()
 {
-	// 退出游戏
+	UE_LOG(LogRPGMainMenuWidget, Log, TEXT("[MainMenu] ExitGame() called"));
+
 	APlayerController* PC = GetOwningPlayer<APlayerController>();
 	if (PC)
 	{
+#if WITH_EDITOR
+		if (!IsRunningGame() && GetWorld() && GetWorld()->IsPlayInEditor())
+		{
+			UE_LOG(LogRPGMainMenuWidget, Log, TEXT("[MainMenu] ExitGame - PIE detected, using ConsoleCommand quit"));
+			PC->ConsoleCommand("quit");
+			return;
+		}
+#endif
 		UKismetSystemLibrary::QuitGame(PC, nullptr, EQuitPreference::Quit, false);
 	}
-	UE_LOG(LogRPGMainMenuWidget, Log, TEXT("URPGMainMenuWidget::ExitGame - Quitting game"));
+	else
+	{
+		UE_LOG(LogRPGMainMenuWidget, Warning, TEXT("[MainMenu] ExitGame - PlayerController is null"));
+	}
 }
 
 void URPGMainMenuWidget::OnStartGameClicked()
 {
+	UE_LOG(LogRPGMainMenuWidget, Log, TEXT("[MainMenu] OnStartGameClicked() - Button click received!"));
 	StartGame();
 }
 
 void URPGMainMenuWidget::OnExitGameClicked()
 {
+	UE_LOG(LogRPGMainMenuWidget, Log, TEXT("[MainMenu] OnExitGameClicked() - Button click received!"));
 	ExitGame();
 }

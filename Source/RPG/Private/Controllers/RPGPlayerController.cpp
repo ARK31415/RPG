@@ -4,6 +4,8 @@
 #include "Controllers/RPGPlayerController.h"
 #include "UI/Subsystem/RPGUIManagerSubsystem.h"
 #include "Engine/World.h"
+#include "Engine/GameInstance.h"
+#include "GameFramework/Pawn.h"
 #include "RPGDebugHelper.h"
 
 ARPGPlayerController::ARPGPlayerController()
@@ -15,16 +17,26 @@ void ARPGPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// ✅ 调用 UI 管理器显示 HUD（通过 CommonUI 四层栈的 Game 层）
-	if (URPGUIManagerSubsystem* UIManager = GetGameInstance()->GetSubsystem<URPGUIManagerSubsystem>())
+	Debug::Log(FString::Printf(TEXT("[PlayerController] BeginPlay - Name=%s"), *GetName()));
+	Debug::Log(FString::Printf(TEXT("[PlayerController] BeginPlay - Pawn=%s"), GetPawn() ? *GetPawn()->GetName() : TEXT("NULL")));
+
+	UGameInstance* GI = GetGameInstance();
+	if (GI)
 	{
-		//UIManager->ShowHUD(this);
-		Debug::Log(TEXT("[PlayerController] BeginPlay - ShowHUD called"));
+		URPGUIManagerSubsystem* UIManager = GI->GetSubsystem<URPGUIManagerSubsystem>();
+		Debug::Log(FString::Printf(TEXT("[PlayerController] BeginPlay - UIManager=%s"), UIManager ? TEXT("Found") : TEXT("NULL")));
 	}
-	else
-	{
-		Debug::PrintWarning(TEXT("[PlayerController] BeginPlay - URPGUIManagerSubsystem not found"));
-	}
+}
+
+void ARPGPlayerController::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+
+	Debug::Log(FString::Printf(TEXT("[PlayerController] OnPossess - Pawn=%s"), InPawn ? *InPawn->GetName() : TEXT("NULL")));
+
+	bShowMouseCursor = false;
+	SetInputMode(FInputModeGameOnly());
+	Debug::Log(TEXT("[PlayerController] OnPossess - InputMode set to GameOnly"));
 }
 
 FGenericTeamId ARPGPlayerController::GetGenericTeamId() const

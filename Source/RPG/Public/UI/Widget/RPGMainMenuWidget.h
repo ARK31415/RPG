@@ -16,36 +16,28 @@ class RPG_API URPGMainMenuWidget : public URPGWidget_ActivatableBase
 	GENERATED_BODY()
 
 public:
-	// 构造函数
 	URPGMainMenuWidget(const FObjectInitializer& ObjectInitializer);
 
-	// 初始化Widget
 	virtual bool Initialize() override;
-
-	// 激活Widget
 	virtual void NativeOnActivated() override;
-
-	// 停用Widget
 	virtual void NativeOnDeactivated() override;
+	virtual bool NativeSupportsCustomNavigation() const override { return false; }
+	virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
+	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 
-	// 开始游戏
 	UFUNCTION(BlueprintCallable)
 	void StartGame();
 
-	// 退出游戏
 	UFUNCTION(BlueprintCallable)
 	void ExitGame();
 
 protected:
-	// 游戏标题文本
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	class UTextBlock* TitleText;
 
-	// 开始游戏按钮
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	class UButton* StartGameButton;
 
-	// 退出游戏按钮
 	UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
 	class UButton* ExitGameButton;
 
