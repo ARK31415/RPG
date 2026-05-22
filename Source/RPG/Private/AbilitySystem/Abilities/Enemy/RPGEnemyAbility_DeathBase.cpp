@@ -41,7 +41,7 @@ void URPGEnemyAbility_DeathBase::StartDeathSequence_Implementation(AActor* Avata
 		return;
 	}
 
-	UE_LOG(LogRPGEnemyDeath, Log, TEXT("Enemy DeathStarted: %s"), *EnemyCharacter->GetName());
+	UE_LOG(LogRPGEnemyDeath, Log, TEXT("[Death-EnemyDeathGA] StartDeathSeq - %s"), *EnemyCharacter->GetName());
 	Debug::Print(FString::Printf(TEXT("[Death-EnemyDeathGA] StartDeathSeq - %s"), *EnemyCharacter->GetName()));
 
 	// 调用蓝图可重写钩子（用于特效、掉落物等）
@@ -59,7 +59,7 @@ void URPGEnemyAbility_DeathBase::FinishDeathSequence_Implementation(AActor* Avat
 		return;
 	}
 
-	UE_LOG(LogRPGEnemyDeath, Log, TEXT("Enemy DeathFinished: %s"), *EnemyCharacter->GetName());
+	UE_LOG(LogRPGEnemyDeath, Log, TEXT("[Death-EnemyDeathGA] FinishDeathSeq - %s"), *EnemyCharacter->GetName());
 	Debug::Print(FString::Printf(TEXT("[Death-EnemyDeathGA] FinishDeathSeq - %s"), *EnemyCharacter->GetName()));
 
 	// 调用蓝图可重写钩子（用于经验值、任务更新等）

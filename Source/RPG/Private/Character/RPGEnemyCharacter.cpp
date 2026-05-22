@@ -170,7 +170,7 @@ void ARPGEnemyCharacter::OnDeathStarted_Implementation()
 	// 职责：仅处理"立即禁用交互"表现逻辑（碰撞/移动/AI/战斗）
 	// 注意：不能在此处设置 bPauseAnims=true，否则后续的死亡 Montage 无法推进。
 	// 动画姿势锁定交由 OnDeathFinished 处理。
-	UE_LOG(LogRPGEnemyCharacter, Warning, TEXT("[Enemy] OnDeathStarted() called on %s"), *GetName());
+	UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[Death-EnemyChar] OnDeathStarted - %s"), *GetName());
 	Debug::Print(FString::Printf(TEXT("[Death-EnemyChar] OnDeathStarted - %s"), *GetName()));
 
 
@@ -218,14 +218,14 @@ void ARPGEnemyCharacter::OnDeathStarted_Implementation()
 void ARPGEnemyCharacter::OnDeathFinished_Implementation()
 {
 	// 职责：Montage 已播完，锁定姿势 + 回收/销毁
-	UE_LOG(LogRPGEnemyCharacter, Warning, TEXT("[Enemy] OnDeathFinished() called on %s"), *GetName());
+	UE_LOG(LogRPGEnemyCharacter, Warning, TEXT("[Death-EnemyChar] OnDeathFinished - %s"), *GetName());
 	Debug::Print(FString::Printf(TEXT("[Death-EnemyChar] OnDeathFinished - %s"), *GetName()));
 
 	// 1. 锁定死亡姿势：Montage 已播完，此时暂停 Mesh 动画作为防御措施
 	if (USkeletalMeshComponent* MeshComp = GetMesh())
 	{
 		MeshComp->bPauseAnims = true;
-		UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[Enemy] Locked death pose (bPauseAnims = true)"));
+		UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[Death-EnemyChar] LockPose - %s, bPauseAnims=true"), *GetName());
 		Debug::Log(FString::Printf(TEXT("[Death-EnemyChar] LockPose - %s, bPauseAnims=true"), *GetName()));
 	}
 
@@ -244,7 +244,7 @@ void ARPGEnemyCharacter::OnDeathFinished_Implementation()
 			if (URPGEnemyPoolSubsystem* Pool = World->GetSubsystem<URPGEnemyPoolSubsystem>())
 			{
 				Pool->ReleaseEnemy(this);
-				UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[Enemy] Released to pool: %s"), *GetName());
+				UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[Death-EnemyChar] ReleasedToPool - %s"), *GetName());
 				Debug::Log(FString::Printf(TEXT("[Death-EnemyChar] ReleasedToPool - %s"), *GetName()));
 				return;
 			}
@@ -253,6 +253,6 @@ void ARPGEnemyCharacter::OnDeathFinished_Implementation()
 
 	// 回退：Pool 不可用或普通生成的敌人，直接销毁
 	SetLifeSpan(0.1f);
-	UE_LOG(LogRPGEnemyCharacter, Warning, TEXT("[Enemy] No pool or direct spawn, SetLifeSpan(0.1s): %s"), *GetName());
+	UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[Death-EnemyChar] SetLifeSpan(0.1s) -> Destroy - %s"), *GetName());
 	Debug::Log(FString::Printf(TEXT("[Death-EnemyChar] SetLifeSpan(0.1s) -> Destroy - %s"), *GetName()));
 }

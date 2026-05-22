@@ -40,6 +40,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void ShowMainMenu();
 
+	void InitializePlayerInput(UInputComponent* PlayerInputComponent);
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaTime) override;

@@ -1,11 +1,15 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Controllers/RPGPlayerController.h"
 #include "UI/Subsystem/RPGUIManagerSubsystem.h"
+#include "Character/RPGPlayerCharacter.h"
 #include "Engine/World.h"
 #include "Engine/GameInstance.h"
+#include "Engine/LocalPlayer.h"
 #include "GameFramework/Pawn.h"
+#include "GameFramework/PlayerInput.h"
+#include "Components/InputComponent.h"
 #include "RPGDebugHelper.h"
 
 ARPGPlayerController::ARPGPlayerController()
@@ -16,27 +20,36 @@ ARPGPlayerController::ARPGPlayerController()
 void ARPGPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
-
-	Debug::Log(FString::Printf(TEXT("[PlayerController] BeginPlay - Name=%s"), *GetName()));
-	Debug::Log(FString::Printf(TEXT("[PlayerController] BeginPlay - Pawn=%s"), GetPawn() ? *GetPawn()->GetName() : TEXT("NULL")));
-
-	UGameInstance* GI = GetGameInstance();
-	if (GI)
-	{
-		URPGUIManagerSubsystem* UIManager = GI->GetSubsystem<URPGUIManagerSubsystem>();
-		Debug::Log(FString::Printf(TEXT("[PlayerController] BeginPlay - UIManager=%s"), UIManager ? TEXT("Found") : TEXT("NULL")));
-	}
 }
 
 void ARPGPlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 
-	Debug::Log(FString::Printf(TEXT("[PlayerController] OnPossess - Pawn=%s"), InPawn ? *InPawn->GetName() : TEXT("NULL")));
-
 	bShowMouseCursor = false;
 	SetInputMode(FInputModeGameOnly());
-	Debug::Log(TEXT("[PlayerController] OnPossess - InputMode set to GameOnly"));
+
+	if (PlayerInput && !InputComponent)
+	{
+		SetupInputComponent();
+	}
+
+	if (InputComponent && InPawn)
+	{
+		ARPGPlayerCharacter* RPGPawn = Cast<ARPGPlayerCharacter>(InPawn);
+		if (RPGPawn)
+		{
+			RPGPawn->InitializePlayerInput(InputComponent);
+		}
+	}
+
+	GetWorldTimerManager().SetTimer(InputModeTimerHandle, this, &ARPGPlayerController::EnsureGameInputMode, 0.1f, false);
+}
+
+void ARPGPlayerController::EnsureGameInputMode()
+{
+	SetInputMode(FInputModeGameOnly());
+	bShowMouseCursor = false;
 }
 
 FGenericTeamId ARPGPlayerController::GetGenericTeamId() const

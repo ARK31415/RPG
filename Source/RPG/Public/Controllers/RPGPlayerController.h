@@ -21,6 +21,9 @@ public:
 
 	virtual FGenericTeamId GetGenericTeamId() const override;
 
+	void EnsureGameInputMode();
+
 private:
 	FGenericTeamId PlayerTeamId;
+	FTimerHandle InputModeTimerHandle;
 };

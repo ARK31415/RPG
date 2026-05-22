@@ -30,11 +30,10 @@ void ARPGMenuPlayerController::BeginPlay()
 	if (!FoundCameras.IsEmpty())
 	{
 		SetViewTarget(FoundCameras[0]);
-		Debug::Log(FString::Printf(TEXT("[MenuPlayerController] BeginPlay - ViewTarget set to camera: %s"), *FoundCameras[0]->GetName()));
 	}
 	else
 	{
-		Debug::PrintWarning(TEXT("[MenuPlayerController] BeginPlay - No CameraActor with tag 'MainMenu' found in the level! Place one and tag it 'MainMenu'."));
+		Debug::PrintWarning(TEXT("[MenuPlayerController] BeginPlay - No CameraActor with tag 'MainMenu' found in the level!"));
 	}
 
 	bShowMouseCursor = true;
@@ -80,7 +79,6 @@ void ARPGMenuPlayerController::ShowMainMenu()
 
 	PrimaryLayout->AddToViewport();
 	UIManager->RegisterWidgetLayout_Base(PrimaryLayout);
-	Debug::Log(TEXT("[MenuPlayerController] ShowMainMenu - PrimaryGameLayout registered"));
 
 	TSoftClassPtr<URPGWidget_ActivatableBase> SoftMainMenuClass(MainMenuWidgetClass.ToSoftObjectPath());
 
@@ -89,10 +87,6 @@ void ARPGMenuPlayerController::ShowMainMenu()
 		SoftMainMenuClass,
 		[](EAsyncPushWidgetState State, URPGWidget_ActivatableBase* Widget)
 		{
-			if (State == EAsyncPushWidgetState::AfterPush)
-			{
-				Debug::Log(TEXT("[MenuPlayerController] ShowMainMenu - MainMenuWidget pushed to Frontend stack"));
-			}
 		}
 	);
 }

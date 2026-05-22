@@ -121,7 +121,7 @@ void URPGHealthComponent::StartDeath()
 	
 	bIsDead = true;
 	
-	UE_LOG(LogRPGHealthComponent, Log, TEXT("StartDeath: %s"), *GetOwner()->GetName());
+	UE_LOG(LogRPGHealthComponent, Log, TEXT("[Death-HealthComp] StartDeath - %s, Health=%.1f"), *GetOwner()->GetName(), CurrentHealth);
 	Debug::Print(FString::Printf(TEXT("[Death-HealthComp] StartDeath - %s"), *GetOwner()->GetName()));
 	Debug::Log(FString::Printf(TEXT("[Death-HealthComp] StartDeath - %s, Health=%.1f"), *GetOwner()->GetName(), CurrentHealth));
 
@@ -138,6 +138,7 @@ void URPGHealthComponent::StartDeath()
 		);
 		
 		UE_LOG(LogRPGHealthComponent, Log, TEXT("Sent GameplayEvent Shared.Event.Death to trigger Death GA"));
+		UE_LOG(LogRPGHealthComponent, Log, TEXT("[Death-HealthComp] GameplayEvent Sent -> Shared.Event.Death for %s"), *GetOwner()->GetName());
 		Debug::Log(FString::Printf(TEXT("[Death-HealthComp] GameplayEvent Sent -> Shared.Event.Death for %s"), *GetOwner()->GetName()));
 	}
 	else

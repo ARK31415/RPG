@@ -356,6 +356,7 @@ void ARPGEnemySpawner::LogPoolStatus()
 	{
 		const FString Msg = FString::Printf(TEXT("[%s] Pool: %d avail / %d spawned"),
 			*GetName(), Avail, PoolSpawnedEnemies.Num() + DirectSpawnedEnemies.Num());
+		UE_LOG(LogRPGEnemySpawner, Log, TEXT("[Spawner] Pool status - %s"), *Msg);
 		Debug::Print(Msg);
 	}
 }

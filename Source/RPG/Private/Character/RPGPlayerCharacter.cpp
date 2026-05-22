@@ -293,6 +293,11 @@ void ARPGPlayerCharacter::DrawRotationDebug()
 	DrawDebugLine(GetWorld(), Start, TargetEnd, FColor::Red, false, -1.f, 0, 3.f);
 }
 
+void ARPGPlayerCharacter::InitializePlayerInput(UInputComponent* PlayerInputComponent)
+{
+	SetupPlayerInputComponent(PlayerInputComponent);
+}
+
 void ARPGPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	checkf(InputConfigDataAsset, TEXT("InputConfig is null"))
