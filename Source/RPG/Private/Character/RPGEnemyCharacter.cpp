@@ -171,7 +171,7 @@ void ARPGEnemyCharacter::OnDeathStarted_Implementation()
 	// 注意：不能在此处设置 bPauseAnims=true，否则后续的死亡 Montage 无法推进。
 	// 动画姿势锁定交由 OnDeathFinished 处理。
 	UE_LOG(LogRPGEnemyCharacter, Log, TEXT("[Death-EnemyChar] OnDeathStarted - %s"), *GetName());
-	Debug::Print(FString::Printf(TEXT("[Death-EnemyChar] OnDeathStarted - %s"), *GetName()));
+	//Debug::Print(FString::Printf(TEXT("[Death-EnemyChar] OnDeathStarted - %s"), *GetName()));
 
 
 	// 1. 禁用胶囊体碰撞
@@ -219,7 +219,7 @@ void ARPGEnemyCharacter::OnDeathFinished_Implementation()
 {
 	// 职责：Montage 已播完，锁定姿势 + 回收/销毁
 	UE_LOG(LogRPGEnemyCharacter, Warning, TEXT("[Death-EnemyChar] OnDeathFinished - %s"), *GetName());
-	Debug::Print(FString::Printf(TEXT("[Death-EnemyChar] OnDeathFinished - %s"), *GetName()));
+	//Debug::Print(FString::Printf(TEXT("[Death-EnemyChar] OnDeathFinished - %s"), *GetName()));
 
 	// 1. 锁定死亡姿势：Montage 已播完，此时暂停 Mesh 动画作为防御措施
 	if (USkeletalMeshComponent* MeshComp = GetMesh())
